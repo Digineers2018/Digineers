@@ -125,7 +125,7 @@ namespace WebApplication1.Controllers
         //    /api/ImageAPI/CreateUserGroup
         [HttpGet]
         [ActionName("CreateUserGroup")]
-        public async void CreateUserGroup(List<Stream> listImageStream = null, string groupName = null)
+        public async void CreateUserGroup()
         {
             try
             {
@@ -133,7 +133,10 @@ namespace WebApplication1.Controllers
                 {
                     await faceServiceClient.DeletePersonGroupAsync(personGroupId);
                 }
-                catch { }
+                catch (Exception e)
+                {
+                    string exception = e.ToString();
+                }
 
                 string folder_File_Path = "";
                 if (folder_File_Path == "")
@@ -142,14 +145,15 @@ namespace WebApplication1.Controllers
                 }
 
                 directories = Directory.GetDirectories(folder_File_Path);
-                foreach (string directoryName in directories)
+                foreach (string directory in directories)
                 {
-                    file_Paths = Directory.GetFiles(directoryName);
+                    file_Paths = Directory.GetFiles(directory);
 
                     await faceServiceClient.CreatePersonGroupAsync(personGroupId, groupName);
 
-                    CreatePersonResult person = await faceServiceClient.CreatePersonAsync(personGroupId, directoryName);
-                    foreach (string imagePath in Directory.GetFiles(directoryName))
+                    string personName = Path.GetFileName(directory);
+                    CreatePersonResult person = await faceServiceClient.CreatePersonAsync(personGroupId, personName);
+                    foreach (string imagePath in Directory.GetFiles(directory))
                     {
                         using (Stream imageStream = File.OpenRead(imagePath))
                         {
