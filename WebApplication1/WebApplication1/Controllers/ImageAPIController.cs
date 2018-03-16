@@ -20,6 +20,10 @@ namespace WebApplication1.Controllers
         const string IMAGE_OCP_AICP_SUBSCRIPTION_KEY = "Ocp-Apim-Subscription-Key";
         const string URI_BASE = "https://westcentralus.api.cognitive.microsoft.com/face/v1.0/detect";
 
+        const string SUCCESSFULL = "SUCCESSFULL";
+        const string FAILURE = "FAILURE";
+
+
         public Bitmap input_Face_Image;
         string image_File_Path = null;
 
@@ -122,67 +126,38 @@ namespace WebApplication1.Controllers
         }
 
 
-        //    /api/ImageAPI/CreateUserGroup
-        [HttpGet]
-        [ActionName("CreateUserGroup")]
-        public async void CreateUserGroup()
+        public  void CreateUserGroup()
         {
-            try
-            {
-                try
-                {
-                    await faceServiceClient.DeletePersonGroupAsync(personGroupId);
-                }
-                catch (Exception e)
-                {
-                    string exception = e.ToString();
-                }
+            // To use only once
 
-                string folder_File_Path = "";
-                if (folder_File_Path == "")
-                {
-                    folder_File_Path = @"C:\Users\Sachin13390\Desktop\Face_Data";
-                }
+            //try
+            //{
+            //    await faceServiceClient.DeletePersonGroupAsync(personGroupId);
+            //}
+            //catch (Exception e)
+            //{
+            //    string exception = e.ToString();
+            //}
 
-                directories = Directory.GetDirectories(folder_File_Path);
-                foreach (string directory in directories)
-                {
-                    file_Paths = Directory.GetFiles(directory);
+            //await faceServiceClient.CreatePersonGroupAsync(personGroupId, groupName);
 
-                    await faceServiceClient.CreatePersonGroupAsync(personGroupId, groupName);
-
-                    string personName = Path.GetFileName(directory);
-                    CreatePersonResult person = await faceServiceClient.CreatePersonAsync(personGroupId, personName);
-                    foreach (string imagePath in Directory.GetFiles(directory))
-                    {
-                        using (Stream imageStream = File.OpenRead(imagePath))
-                        {
-                            await faceServiceClient.AddPersonFaceAsync(personGroupId, person.PersonId, imageStream);
-                        }
-                    }
-
-                    await Task.Delay(1000);
-                }
-
-            }
-            catch (Exception ex)
-            {
-                //MessageBox.Show(ex.ToString());
-            }
         }
 
 
-        //    /api/ImageAPI/TrainUserGroup
+        //    /api/ImageAPI/RegisterUser
         [HttpGet]
-        [ActionName("TrainUserGroup")]
-        public async void TrainUserGroup(string personGroupId = "")
+        [ActionName("RegisterUser")]
+        public async Task<string> RegisterUser(List<Stream> listUserImages, string personName )
         {
             try
             {
-                if (personGroupId == "")
+                CreatePersonResult person = await faceServiceClient.CreatePersonInPersonGroupAsync(personGroupId, personName);
+
+                foreach (Stream imageStream in listUserImages)
                 {
-                    personGroupId = this.personGroupId;
+                    await faceServiceClient.AddPersonFaceInLargePersonGroupAsync(personGroupId, person.PersonId, imageStream);
                 }
+
 
                 await faceServiceClient.TrainPersonGroupAsync(personGroupId);
 
@@ -195,17 +170,89 @@ namespace WebApplication1.Controllers
                     {
                         break;
                     }
-
                     await Task.Delay(1000);
                 }
 
-                //MessageBox.Show("Training successfully completed");
+                return SUCCESSFULL;
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                //MessageBox.Show(ex.Message);
+                return FAILURE;
+                //return Convert.ToString(exception);
             }
+
+            //try
+            //{
+
+            //    string folder_File_Path = "";
+            //    if (folder_File_Path == "")
+            //    {
+            //        folder_File_Path = @"C:\Users\Sachin13390\Desktop\Face_Data";
+            //    }
+
+
+            //    directories = Directory.GetDirectories(folder_File_Path);
+            //    foreach (string directory in directories)
+            //    {
+            //        file_Paths = Directory.GetFiles(directory);
+
+
+
+            //        string personName = Path.GetFileName(directory);
+            //        CreatePersonResult person = await faceServiceClient.CreatePersonAsync(personGroupId, personName);
+            //        foreach (string imagePath in Directory.GetFiles(directory))
+            //        {
+            //            using (Stream imageStream = File.OpenRead(imagePath))
+            //            {
+            //                await faceServiceClient.AddPersonFaceAsync(personGroupId, person.PersonId, imageStream);
+            //            }
+            //        }
+
+            //        await Task.Delay(1000);
+            //    }
+
+            //}
+            //catch (Exception ex)
+            //{
+            //    //MessageBox.Show(ex.ToString());
+            //}
         }
+
+
+
+        ////    /api/ImageAPI/TrainUserGroup
+        //[HttpGet]
+        //[ActionName("TrainUserGroup")]
+        //public async Task<string> TrainUserGroup(string personGroupId = "")
+        //{
+        //    try
+        //    {
+        //        if (personGroupId == "")
+        //        {
+        //            personGroupId = this.personGroupId;
+        //        }
+
+        //        await faceServiceClient.TrainPersonGroupAsync(personGroupId);
+
+        //        TrainingStatus trainingStatus = null;
+        //        while (true)
+        //        {
+        //            trainingStatus = await faceServiceClient.GetPersonGroupTrainingStatusAsync(personGroupId);
+
+        //            if (trainingStatus.Status != Status.Running)
+        //            {
+        //                break;
+        //            }
+
+        //        }
+        //        return SUCCESSFULL;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return FAILURE;
+        //        //MessageBox.Show(ex.Message);
+        //    }
+        //}
 
         //    /api/ImageAPI/IdentifyUser
         [HttpGet]
@@ -220,7 +267,7 @@ namespace WebApplication1.Controllers
 
             if (_imagePath == "")
             {
-                _imagePath = "";
+                _imagePath = @"C:\Users\Sachin13390\Desktop\images.jpg";
             }
 
             try
