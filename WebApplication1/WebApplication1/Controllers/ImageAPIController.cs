@@ -10,6 +10,7 @@ using Microsoft.ProjectOxford.Face;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.ProjectOxford.Face.Contract;
+using System.Linq;
 
 namespace WebApplication1.Controllers
 {
@@ -22,8 +23,8 @@ namespace WebApplication1.Controllers
         public Bitmap input_Face_Image;
         string image_File_Path = null;
 
-        string _groupId = "12111993133902018";
-        string _groupName = "Mastek_Digineers";
+        string personGroupId = "12111993133902018";
+        string groupName = "Mastek_Digineers";
 
 
         const string FACE_API_ENDPOINT = "https://westcentralus.api.cognitive.microsoft.com/face/v1.0";
@@ -117,6 +118,135 @@ namespace WebApplication1.Controllers
             //MakeFaceDetectRequest(byteData);
 
             Face[] faces = await UploadAndDetectFaces(image_File_Path);
+
+        }
+
+
+        //    /api/ImageAPI/CreateUserGroup
+        [HttpGet]
+        [ActionName("CreateUserGroup")]
+        public async void CreateUserGroup(List<Stream> listImageStream = null, string groupName = null)
+        {
+            try
+            {
+                try
+                {
+                    await faceServiceClient.DeletePersonGroupAsync(personGroupId);
+                }
+                catch { }
+
+                string folder_File_Path = "";
+                if (folder_File_Path == "")
+                {
+                    folder_File_Path = @"C:\Users\Sachin13390\Desktop\Face_Data";
+                }
+
+                directories = Directory.GetDirectories(folder_File_Path);
+                foreach (string directoryName in directories)
+                {
+                    file_Paths = Directory.GetFiles(directoryName);
+
+                    await faceServiceClient.CreatePersonGroupAsync(personGroupId, groupName);
+
+                    CreatePersonResult person = await faceServiceClient.CreatePersonAsync(personGroupId, directoryName);
+                    foreach (string imagePath in Directory.GetFiles(directoryName))
+                    {
+                        using (Stream imageStream = File.OpenRead(imagePath))
+                        {
+                            await faceServiceClient.AddPersonFaceAsync(personGroupId, person.PersonId, imageStream);
+                        }
+                    }
+
+                    await Task.Delay(1000);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                //MessageBox.Show(ex.ToString());
+            }
+        }
+
+
+        //    /api/ImageAPI/TrainUserGroup
+        [HttpGet]
+        [ActionName("TrainUserGroup")]
+        public async void TrainUserGroup(string personGroupId = "")
+        {
+            try
+            {
+                if (personGroupId == "")
+                {
+                    personGroupId = this.personGroupId;
+                }
+
+                await faceServiceClient.TrainPersonGroupAsync(personGroupId);
+
+                TrainingStatus trainingStatus = null;
+                while (true)
+                {
+                    trainingStatus = await faceServiceClient.GetPersonGroupTrainingStatusAsync(personGroupId);
+
+                    if (trainingStatus.Status != Status.Running)
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(1000);
+                }
+
+                //MessageBox.Show("Training successfully completed");
+            }
+            catch (Exception ex)
+            {
+                //MessageBox.Show(ex.Message);
+            }
+        }
+
+        //    /api/ImageAPI/IdentifyUser
+        [HttpGet]
+        [ActionName("IdentifyUser")]
+        public async void IdentifyUser(string personGroupId = "", string _imagePath = "")
+        {
+
+            if (personGroupId == "")
+            {
+                personGroupId = this.personGroupId;
+            }
+
+            if (_imagePath == "")
+            {
+                _imagePath = "";
+            }
+
+            try
+            {
+                Face[] faces = await UploadAndDetectFaces(_imagePath);
+                var faceIds = faces.Select(face => face.FaceId).ToArray();
+
+                var faceBitmap = new Bitmap(_imagePath);
+
+                using (var g = Graphics.FromImage(faceBitmap))
+                {
+
+                    foreach (var identifyResult in await faceServiceClient.IdentifyAsync(personGroupId, faceIds))
+                    {
+                        if (identifyResult.Candidates.Length != 0)
+                        {
+                            var candidateId = identifyResult.Candidates[0].PersonId;
+                            var person = await faceServiceClient.GetPersonAsync(personGroupId, candidateId);
+                        }
+                    }
+                }
+
+                //imgBox.Image = faceBitmap;
+                //MessageBox.Show("Identification successfully completed");
+
+            }
+            catch (Exception ex)
+            {
+                //MessageBox.Show(ex.Message);
+            }
 
         }
 
