@@ -22,55 +22,20 @@ namespace WebApplication1.Controllers
         const string uriBase = "https://westcentralus.api.cognitive.microsoft.com/face/v1.0/detect";
 
         public Bitmap input_Face_Image;
-        byte[] image_Byte_Data;
+        string image_File_Path = null;
 
 
-        //static async void MakeRequest()
-        //{
-        //    var client = new HttpClient();
-        //    var queryString = HttpUtility.ParseQueryString(string.Empty);
-
-        //    // Request headers
-        //    client.DefaultRequestHeaders.Add(VOICE_OCP_AICP_SUBSCRIPTION_KEY, VOICE_SUBSCRIBTION_KEY);
-
-        //    // Request parameters
-        //    queryString["shortAudio"] = "false";
-        //    var uri = "https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles/{identificationProfileId}/enroll?" + queryString;
-
-        //    HttpResponseMessage response;
-
-        //    // Request body
-        //    byte[] byteData = Encoding.UTF8.GetBytes("{body}");
-
-        //    using (var content = new ByteArrayContent(byteData))
-        //    {
-        //        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-        //        response = await client.PostAsync(uri, content);
-        //    }
-
-        //}
-
-        /// <summary>
-        /// Gets the analysis of the specified image file by using the Computer Vision REST API.
-        /// </summary>
-        /// <param name="imageFilePath">The image file.</param>
-        static async void MakeAnalysisRequest(string imageFilePath)
+        static async void MakeFaceDetectRequest(byte[] byteData)
         {
             HttpClient client = new HttpClient();
 
-            // Request headers.
             client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", SUBSCRIBTION_KEY);
 
-            // Request parameters. A third optional parameter is "details".
             string requestParameters = "returnFaceId=true&returnFaceLandmarks=false&returnFaceAttributes=age,gender,headPose,smile,facialHair,glasses,emotion,hair,makeup,occlusion,accessories,blur,exposure,noise";
 
-            // Assemble the URI for the REST API Call.
             string uri = uriBase + "?" + requestParameters;
 
             HttpResponseMessage response;
-
-            // Request body. Posts a locally stored JPEG image.
-            byte[] byteData = GetImageAsByteArray(imageFilePath);
 
             using (ByteArrayContent content = new ByteArrayContent(byteData))
             {
@@ -90,15 +55,17 @@ namespace WebApplication1.Controllers
             }
         }
 
-        //    /api/ImageAPI/ImageDemo
-        [HttpGet()]
-        public void ImageDemo()
+        //    /api/ImageAPI/FaceDetect
+        [HttpGet]
+        [ActionName("FaceDetect")]
+        public void FaceDetect(string image_File_Path = "")
         {
-            string image_File_Path = @"C:\Users\Sachin\Desktop\GG.jpg";
-
-            //image_Byte_Data = GetImageAsByteArray(image_File_Path);
-            //input_Face_Image = new Bitmap(image_File_Path);
-            MakeAnalysisRequest(image_File_Path);
+            if (image_File_Path != "")
+            {
+                image_File_Path = @"C:\Users\Sachin\Desktop\GG.jpg";
+            }
+            byte[] byteData = GetImageAsByteArray(image_File_Path);
+            MakeFaceDetectRequest(byteData);
         }
 
         static byte[] GetImageAsByteArray(string imageFilePath)
