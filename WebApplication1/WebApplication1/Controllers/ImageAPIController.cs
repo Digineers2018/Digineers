@@ -18,18 +18,16 @@ namespace WebApplication1.Controllers
     {
         const string IMAGE_SUBSCRIPTION_KEY = "d51fdfb00e354267bd91d120d92b2f70";
         const string IMAGE_OCP_AICP_SUBSCRIPTION_KEY = "Ocp-Apim-Subscription-Key";
-        const string URI_BASE = "https://westcentralus.api.cognitive.microsoft.com/face/v1.0/detect";
 
         const string SUCCESSFULL = "SUCCESSFULL";
         const string FAILURE = "FAILURE";
-
+        const string USERCANNOTBEIDENTIFIED = "USER CANNOT BE IDENTIFIED";
 
         public Bitmap input_Face_Image;
         string image_File_Path = null;
 
         string personGroupId = "12111993133902018";
         string groupName = "Mastek_Digineers";
-
 
         const string FACE_API_ENDPOINT = "https://westcentralus.api.cognitive.microsoft.com/face/v1.0";
 
@@ -47,38 +45,7 @@ namespace WebApplication1.Controllers
             return binaryReader.ReadBytes((int)fileStream.Length);
         }
 
-        static async void MakeFaceDetectRequest(byte[] byteData)
-        {
-            HttpClient client = new HttpClient();
-
-            client.DefaultRequestHeaders.Add(IMAGE_OCP_AICP_SUBSCRIPTION_KEY, IMAGE_SUBSCRIPTION_KEY);
-
-            string requestParameters = "returnFaceId=true&returnFaceLandmarks=false&returnFaceAttributes=age,gender,headPose,smile,facialHair,glasses,emotion,hair,makeup,occlusion,accessories,blur,exposure,noise";
-
-            string uri = URI_BASE + "?" + requestParameters;
-
-            HttpResponseMessage response;
-
-            using (ByteArrayContent content = new ByteArrayContent(byteData))
-            {
-                // This example uses content type "application/octet-stream".
-                // The other content types you can use are "application/json" and "multipart/form-data".
-                content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-
-                // Execute the REST API call.
-                response = await client.PostAsync(uri, content);
-
-                // Get the JSON response.
-                string contentString = await response.Content.ReadAsStringAsync();
-
-                // Display the JSON response.
-                dynamic dynObj = JsonConvert.DeserializeObject(contentString);
-
-            }
-        }
-
-
-        private async Task<Face[]> UploadAndDetectFaces(string imageFilePath)
+        private async Task<Face[]> UploadAndDetectFaces(Stream imageFileStream)
         {
             // The list of Face attributes to return.
             IEnumerable<FaceAttributeType> faceAttributes =
@@ -87,11 +54,8 @@ namespace WebApplication1.Controllers
             // Call the Face API.
             try
             {
-                using (Stream imageFileStream = File.OpenRead(imageFilePath))
-                {
-                    Face[] faces = await faceServiceClient.DetectAsync(imageFileStream, returnFaceId: true, returnFaceLandmarks: false, returnFaceAttributes: faceAttributes);
-                    return faces;
-                }
+                Face[] faces = await faceServiceClient.DetectAsync(imageFileStream, returnFaceId: true, returnFaceLandmarks: false, returnFaceAttributes: faceAttributes);
+                return faces;
             }
             // Catch and display Face API errors.
             catch (FaceAPIException f)
@@ -107,26 +71,7 @@ namespace WebApplication1.Controllers
             }
         }
 
-        //    /api/ImageAPI/FaceDetect
-        [HttpGet]
-        [ActionName("FaceDetect")]
-        public async void FaceDetect(string image_File_Path = "")
-        {
-            if (image_File_Path == "")
-            {
-                image_File_Path = @"C:\Users\Sachin\Desktop\GG.jpg";
-            }
-
-            byte[] byteData = GetImageAsByteArray(image_File_Path);
-
-            //MakeFaceDetectRequest(byteData);
-
-            Face[] faces = await UploadAndDetectFaces(image_File_Path);
-
-        }
-
-
-        public  void CreateUserGroup()
+        private void CreateUserGroup()
         {
             // To use only once
 
@@ -143,19 +88,47 @@ namespace WebApplication1.Controllers
 
         }
 
+        private Stream GetImageStream(string imageFilePath)
+        {
+            Stream imageFileStream = File.OpenRead(imageFilePath);
+
+            return imageFileStream;
+        }
+
 
         //    /api/ImageAPI/RegisterUser
         [HttpGet]
         [ActionName("RegisterUser")]
-        public async Task<string> RegisterUser(List<Stream> listUserImages, string personName )
+        public async Task<string> RegisterUser(List<Stream> listUserImages, string personName = "")
         {
             try
             {
+                #region TestBed
+                //if (listUserImages == null)
+                //{
+                //    listUserImages = new List<Stream>();
+
+                //    string directoryPath = @"C:\Users\Sachin13390\Desktop\Face_Data";
+
+                //    string[] allDirectory = Directory.GetDirectories(directoryPath);
+
+                //    foreach (string dir in allDirectory)
+                //    {
+                //        personName = Path.GetFileName(dir);
+                //        string[] file_Paths = Directory.GetFiles(dir);
+                //        foreach (string filePath in file_Paths)
+                //        {
+                //            listUserImages.Add(GetImageStream(filePath));
+                //        }
+                //    }
+                //}
+                #endregion
+
                 CreatePersonResult person = await faceServiceClient.CreatePersonInPersonGroupAsync(personGroupId, personName);
 
                 foreach (Stream imageStream in listUserImages)
                 {
-                    await faceServiceClient.AddPersonFaceInLargePersonGroupAsync(personGroupId, person.PersonId, imageStream);
+                    await faceServiceClient.AddPersonFaceInPersonGroupAsync(personGroupId, person.PersonId, imageStream);
                 }
 
 
@@ -178,152 +151,40 @@ namespace WebApplication1.Controllers
             catch (Exception exception)
             {
                 return FAILURE;
-                //return Convert.ToString(exception);
             }
-
-            //try
-            //{
-
-            //    string folder_File_Path = "";
-            //    if (folder_File_Path == "")
-            //    {
-            //        folder_File_Path = @"C:\Users\Sachin13390\Desktop\Face_Data";
-            //    }
-
-
-            //    directories = Directory.GetDirectories(folder_File_Path);
-            //    foreach (string directory in directories)
-            //    {
-            //        file_Paths = Directory.GetFiles(directory);
-
-
-
-            //        string personName = Path.GetFileName(directory);
-            //        CreatePersonResult person = await faceServiceClient.CreatePersonAsync(personGroupId, personName);
-            //        foreach (string imagePath in Directory.GetFiles(directory))
-            //        {
-            //            using (Stream imageStream = File.OpenRead(imagePath))
-            //            {
-            //                await faceServiceClient.AddPersonFaceAsync(personGroupId, person.PersonId, imageStream);
-            //            }
-            //        }
-
-            //        await Task.Delay(1000);
-            //    }
-
-            //}
-            //catch (Exception ex)
-            //{
-            //    //MessageBox.Show(ex.ToString());
-            //}
         }
-
-
-
-        ////    /api/ImageAPI/TrainUserGroup
-        //[HttpGet]
-        //[ActionName("TrainUserGroup")]
-        //public async Task<string> TrainUserGroup(string personGroupId = "")
-        //{
-        //    try
-        //    {
-        //        if (personGroupId == "")
-        //        {
-        //            personGroupId = this.personGroupId;
-        //        }
-
-        //        await faceServiceClient.TrainPersonGroupAsync(personGroupId);
-
-        //        TrainingStatus trainingStatus = null;
-        //        while (true)
-        //        {
-        //            trainingStatus = await faceServiceClient.GetPersonGroupTrainingStatusAsync(personGroupId);
-
-        //            if (trainingStatus.Status != Status.Running)
-        //            {
-        //                break;
-        //            }
-
-        //        }
-        //        return SUCCESSFULL;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return FAILURE;
-        //        //MessageBox.Show(ex.Message);
-        //    }
-        //}
 
         //    /api/ImageAPI/IdentifyUser
         [HttpGet]
         [ActionName("IdentifyUser")]
-        public async void IdentifyUser(string personGroupId = "", string _imagePath = "")
+        public async Task<string> IdentifyUser(Stream imageStream)
         {
-
-            if (personGroupId == "")
-            {
-                personGroupId = this.personGroupId;
-            }
-
-            if (_imagePath == "")
-            {
-                _imagePath = @"C:\Users\Sachin13390\Desktop\images.jpg";
-            }
+            #region TestBed
+            //string imageFilePath = @"C:\Users\Sachin13390\Desktop\images.jpg";
+            //imageStream = GetImageStream(imageFilePath);
+            #endregion
 
             try
             {
-                Face[] faces = await UploadAndDetectFaces(_imagePath);
+                Face[] faces = await UploadAndDetectFaces(imageStream);
                 var faceIds = faces.Select(face => face.FaceId).ToArray();
 
-                var faceBitmap = new Bitmap(_imagePath);
-
-                using (var g = Graphics.FromImage(faceBitmap))
+                foreach (var identifyResult in await faceServiceClient.IdentifyAsync(personGroupId, faceIds))
                 {
-
-                    foreach (var identifyResult in await faceServiceClient.IdentifyAsync(personGroupId, faceIds))
+                    if (identifyResult.Candidates.Length != 0)
                     {
-                        if (identifyResult.Candidates.Length != 0)
-                        {
-                            var candidateId = identifyResult.Candidates[0].PersonId;
-                            var person = await faceServiceClient.GetPersonAsync(personGroupId, candidateId);
-                        }
+                        var candidateId = identifyResult.Candidates[0].PersonId;
+                        var person = await faceServiceClient.GetPersonInPersonGroupAsync(personGroupId, candidateId);
+                        return person.Name;
                     }
                 }
-
-                //imgBox.Image = faceBitmap;
-                //MessageBox.Show("Identification successfully completed");
-
+                return USERCANNOTBEIDENTIFIED;
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                //MessageBox.Show(ex.Message);
+                return FAILURE;
             }
-
         }
 
-        //    /api/ImageAPI/DUMMY
-        [HttpPost]
-        [ActionName("DUMMY")]
-        public IHttpActionResult DUMMY(string folder_File_Path = "")
-        {
-            if (folder_File_Path == "")
-            {
-                folder_File_Path = @"C:\Users\Sachin13390\Desktop\Face_Data";
-            }
-
-            directories = Directory.GetDirectories(folder_File_Path);
-            foreach (string directory in directories)
-            {
-                file_Paths = Directory.GetFiles(directory);
-            }
-            return Ok();
-
-        }
-
-
-        public void New_Enrollment_Get_Key()
-        {
-            
-        }
     }
 }
