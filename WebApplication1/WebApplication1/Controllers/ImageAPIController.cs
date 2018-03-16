@@ -31,7 +31,7 @@ namespace WebApplication1.Controllers
         private readonly IFaceServiceClient faceServiceClient = new FaceServiceClient(IMAGE_SUBSCRIPTION_KEY, FACE_API_ENDPOINT);
 
 
-        string[] files;
+        string[] file_Paths;
         string[] directories;
 
 
@@ -127,13 +127,13 @@ namespace WebApplication1.Controllers
         {
             if (folder_File_Path == "")
             {
-                folder_File_Path = @"C:\Users\Sachin\Desktop\Face_Data";
+                folder_File_Path = @"C:\Users\Sachin13390\Desktop\Face_Data";
             }
 
             directories = Directory.GetDirectories(folder_File_Path);
             foreach (string directory in directories)
             {
-                string s = directory;
+                file_Paths = Directory.GetFiles(directory);
             }
             return Ok();
 
