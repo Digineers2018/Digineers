@@ -106,9 +106,27 @@ namespace WebApplication1.Controllers
 
                     var content = new MultipartFormDataContent("Upload----" + DateTime.Now.ToString("u"));
                     Stream audioStream = File.OpenRead(@"C:\Users\Sachin13390\Desktop\VoiceSamples\amy.wav");
+
+                    bytes = ConvertWavTo16000Hz16BitMonoWav(bytes);
+                    audioStream = new MemoryStream(bytes);
+
                     content.Add(new StreamContent(audioStream), "Data", "testFile_" + DateTime.Now.ToString("u"));
                     response = await client.PostAsync(enrollmentProfileUri, content).ConfigureAwait(false);
-                    var data = await response.Content.ReadAsAsync<ExpandoObject>();
+                    if (response.StatusCode == HttpStatusCode.Accepted)
+                    {
+                        IEnumerable<string> operationLocation = response.Headers.GetValues("Operation-Location");
+                        if (operationLocation.Count() == 1)
+                        {
+                            string operationUrl = operationLocation.First();
+                            OperationLocation location = new OperationLocation();
+                            location.Url = operationUrl;
+                        }
+                        else
+                        {
+                            return FAILURE;
+                        }
+                    }
+                    //
                 }
             }
             catch(Exception enrollmentException)
@@ -119,34 +137,48 @@ namespace WebApplication1.Controllers
         }
 
 
-        public static byte[] ConvertWavTo8000Hz16BitMonoWav(byte[] inArray)
+        public static byte[] ConvertWavTo16000Hz16BitMonoWav(byte[] inArray)
         {
-            using (var mem = new MemoryStream(inArray))
+            //WaveFileWriter w = null;
+            //try
             {
-                using (var reader = new WaveFileReader(mem))
+                using (var mem = new MemoryStream(inArray))
                 {
-                    using (var converter = WaveFormatConversionStream.CreatePcmStream(reader))
+                    using (var reader = new WaveFileReader(mem))
                     {
-                        using (var upsampler = new WaveFormatConversionStream(new WaveFormat(8000, 16, 1), converter))
+                        using (var converter = WaveFormatConversionStream.CreatePcmStream(reader))
                         {
-                            byte[] data;
-                            using (var m = new MemoryStream())
+                            using (var upsampler = new WaveFormatConversionStream(new WaveFormat(16000, 16, 1), converter))
                             {
-                                upsampler.CopyTo(m);
-                                data = m.ToArray();
-                            }
-                            using (var m = new MemoryStream())
-                            {
-                                // to create a propper WAV header (44 bytes), which begins with RIFF 
-                                var w = new WaveFileWriter(m, upsampler.WaveFormat);
-                                // append WAV data body
-                                w.Write(data, 0, data.Length);
-                                return m.ToArray();
+                                byte[] data;
+                                using (var m = new MemoryStream())
+                                {
+                                    upsampler.CopyTo(m);
+                                    data = m.ToArray();
+                                }
+                                using (var m = new MemoryStream())
+                                {
+                                    // to create a propper WAV header (44 bytes), which begins with RIFF 
+                                    var w = new WaveFileWriter(m, upsampler.WaveFormat);
+                                    // append WAV data body
+                                    w.Write(data, 0, data.Length);
+                                    w.Dispose();
+                                    return m.ToArray();
+
+                                }
                             }
                         }
                     }
                 }
             }
+            //catch(Exception conversionException)
+            //{
+            //    return null;
+            //}
+            //finally
+            //{
+            //    w.Dispose();
+            //}
         }
 
     }
