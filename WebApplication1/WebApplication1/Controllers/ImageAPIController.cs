@@ -124,13 +124,14 @@ namespace WebApplication1.Controllers
                 //}
                 #endregion
 
+                #region Images
+
                 CreatePersonResult person = await faceServiceClient.CreatePersonInPersonGroupAsync(personGroupId, personName);
 
                 foreach (Stream imageStream in listUserImages)
                 {
                     await faceServiceClient.AddPersonFaceInPersonGroupAsync(personGroupId, person.PersonId, imageStream);
                 }
-
 
                 await faceServiceClient.TrainPersonGroupAsync(personGroupId);
 
@@ -145,6 +146,7 @@ namespace WebApplication1.Controllers
                     }
                     await Task.Delay(1000);
                 }
+                #endregion
 
                 return SUCCESSFULL;
             }
