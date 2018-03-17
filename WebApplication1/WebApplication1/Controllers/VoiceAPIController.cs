@@ -37,10 +37,14 @@ namespace WebApplication1.Controllers
         //    /api/VoiceAPI/RegisterUser
         [HttpGet]
         [ActionName("RegisterUser")]
-        public async Task<string> RegisterUser(List<Stream> listUserImages, string personName = "")
+        public async Task<string> RegisterUser(byte[] bytes)
         {
-
-            byte[] bytes = File.ReadAllBytes(@"C:\Users\Sachin13390\Desktop\VoiceSamples\joey.wav");
+            #region TestBed
+            if (bytes.Length == 0)
+            {
+                bytes = File.ReadAllBytes(@"C:\Users\Sachin13390\Desktop\VoiceSamples\joey.wav");
+            }
+            #endregion
 
             var client = new HttpClient();
             var queryString = HttpUtility.ParseQueryString(string.Empty);
@@ -49,8 +53,6 @@ namespace WebApplication1.Controllers
             client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "05d22648c9544427aa99bc5419a6d79c");
 
             var identificationProfileURI = "https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles?" + queryString;
-            
-
             HttpResponseMessage response;
 
             // Request body
@@ -146,7 +148,7 @@ namespace WebApplication1.Controllers
             request.Headers["Ocp-Apim-Subscription-Key"] = BINGSPEECHAPIKEY;
 
             // Send an audio file by 1024 byte chunks
-            using (FileStream fs = new FileStream(@"C:\Users\Sachin13390\Desktop\VoiceSamples\joey.wav", FileMode.Open, FileAccess.Read))
+            using (FileStream fs = new FileStream(@"C:\Users\Sachin\Desktop\Recording.wav", FileMode.Open, FileAccess.Read))
             {
 
                 /*
