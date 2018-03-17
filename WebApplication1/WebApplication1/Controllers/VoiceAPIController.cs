@@ -38,22 +38,7 @@ namespace WebApplication1.Controllers
         [ActionName("RegisterUser")]
         public async Task<string> RegisterUser(List<Stream> listUserImages, string personName = "")
         {
-            byte[] bytes = File.ReadAllBytes(@"C:\Users\Sachin13390\Desktop\VoiceSamples\amy.wav");
-
-            //BitArray bits = new BitArray(bytes);
-            //StringBuilder audioBinary = new StringBuilder();
-            //foreach(var audioBit in bits)
-            //{
-            //    if(audioBit.ToString().Equals("True"))
-            //    {
-            //        audioBinary.Append("1");
-            //    }
-            //    else
-            //    {
-            //        audioBinary.Append("0");
-            //    }
-                
-            //}
+            byte[] bytes = File.ReadAllBytes(@"C:\Users\Sachin13390\Desktop\VoiceSamples\joey.wav");
 
             var client = new HttpClient();
             var queryString = HttpUtility.ParseQueryString(string.Empty);
@@ -63,71 +48,75 @@ namespace WebApplication1.Controllers
 
             var identificationProfileURI = "https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles?" + queryString;
             
-            
-            
 
             HttpResponseMessage response;
 
             // Request body
             byte[] byteData = Encoding.UTF8.GetBytes("{\"locale\":\"en-us\",}");
             string profileId = string.Empty;
+            string operationUrl = string.Empty;
             using (var content = new ByteArrayContent(byteData))
             {
                 content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                 response = await client.PostAsync(identificationProfileURI, content);
-                var data = await response.Content.ReadAsAsync<ExpandoObject>();
-                if (data.Count() > 0)
+                var profileIdResponseData = await response.Content.ReadAsAsync<ExpandoObject>();
+                if (profileIdResponseData.Count() > 0)
                 {
-                    profileId = data.First().Value.ToString();
+                    profileId = profileIdResponseData.First().Value.ToString();
                 }
             }
             try
             {
                 if (string.IsNullOrEmpty(profileId) == false)
                 {
-                    client = new HttpClient();
-
-                    // Request headers
-                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                    client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "05d22648c9544427aa99bc5419a6d79c");
-                    // Request parameters
-                    queryString["shortAudio"] = "true";
-                    var enrollmentProfileUri = string.Format("https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles/{0}/enroll?{1}", profileId, queryString);
-                    //using (var content = new ByteArrayContent(bytes))
-                    //{
-                    //    content.Headers.ContentType = new MediaTypeHeaderValue("audio/wav;samplerate=1600");
-                    //    response = await client.PostAsync(enrollmentProfileUri, content);
-                    //    var data = await response.Content.ReadAsAsync<ExpandoObject>();
-                    //    //if (data.Count() > 0)
-                    //    //{
-                    //    //    profileId = data.First().Value.ToString();
-                    //    //}
-                    //}
-
-                    var content = new MultipartFormDataContent("Upload----" + DateTime.Now.ToString("u"));
-                    Stream audioStream = File.OpenRead(@"C:\Users\Sachin13390\Desktop\VoiceSamples\amy.wav");
-
-                    bytes = ConvertWavTo16000Hz16BitMonoWav(bytes);
-                    audioStream = new MemoryStream(bytes);
-
-                    content.Add(new StreamContent(audioStream), "Data", "testFile_" + DateTime.Now.ToString("u"));
-                    response = await client.PostAsync(enrollmentProfileUri, content).ConfigureAwait(false);
-                    if (response.StatusCode == HttpStatusCode.Accepted)
+                    for (int enrolmentCount = 0; enrolmentCount < 3; enrolmentCount++)
                     {
-                        IEnumerable<string> operationLocation = response.Headers.GetValues("Operation-Location");
-                        if (operationLocation.Count() == 1)
+
+                        client = new HttpClient();
+
+                        // Request headers
+                        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                        client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "05d22648c9544427aa99bc5419a6d79c");
+                        // Request parameters
+                        queryString["shortAudio"] = "true";
+                        var enrollmentProfileUri = string.Format("https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles/{0}/enroll?{1}", profileId, queryString);
+
+                        var content = new MultipartFormDataContent("Upload----" + DateTime.Now.ToString("u"));
+
+                        bytes = ConvertWavTo16000Hz16BitMonoWav(bytes);
+                        Stream audioStream = new MemoryStream(bytes);
+
+                        content.Add(new StreamContent(audioStream), "Data", "testFile_" + DateTime.Now.ToString("u"));
+                        response = await client.PostAsync(enrollmentProfileUri, content).ConfigureAwait(false);
+                        if (response.StatusCode == HttpStatusCode.Accepted)
                         {
-                            string operationUrl = operationLocation.First();
-                            OperationLocation location = new OperationLocation();
-                            location.Url = operationUrl;
+                            IEnumerable<string> operationLocation = response.Headers.GetValues("Operation-Location");
+                            if (operationLocation.Count() == 1)
+                            {
+                                operationUrl = operationLocation.First();
+                                OperationLocation location = new OperationLocation();
+                            }
+                            else
+                            {
+                                return FAILURE;
+                            }
                         }
-                        else
-                        {
-                            return FAILURE;
-                        }
+
                     }
-                    //
+                    /////////// 3 STEP operationUrl
+
+                    if (string.IsNullOrEmpty(operationUrl) == false)
+                    {
+                        client = new HttpClient();
+
+                        client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "05d22648c9544427aa99bc5419a6d79c");
+
+                        response = await client.GetAsync(operationUrl);
+                        var operationStatusResponseData = await response.Content.ReadAsAsync<ExpandoObject>();
+                        return operationStatusResponseData.First().Value.ToString();
+                    }
                 }
+                
             }
             catch(Exception enrollmentException)
             {
