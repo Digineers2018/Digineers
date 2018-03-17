@@ -31,6 +31,7 @@ namespace WebApplication1.Controllers
         const string FAILURE = "FAILURE";
         const string USERCANNOTBEIDENTIFIED = "USER CANNOT BE IDENTIFIED";
 
+        const string BINGSPEECHAPIKEY = "ffb6a06f528441b891be8f0538e67624";
 
 
         //    /api/VoiceAPI/RegisterUser
@@ -38,6 +39,7 @@ namespace WebApplication1.Controllers
         [ActionName("RegisterUser")]
         public async Task<string> RegisterUser(List<Stream> listUserImages, string personName = "")
         {
+
             byte[] bytes = File.ReadAllBytes(@"C:\Users\Sachin13390\Desktop\VoiceSamples\joey.wav");
 
             var client = new HttpClient();
@@ -103,6 +105,7 @@ namespace WebApplication1.Controllers
                         }
 
                     }
+
                     /////////// 3 STEP operationUrl
 
                     if (string.IsNullOrEmpty(operationUrl) == false)
@@ -125,6 +128,58 @@ namespace WebApplication1.Controllers
             return SUCCESSFULL;
         }
 
+        //    /api/VoiceAPI/UserSpeechToText
+        [HttpGet]
+        [ActionName("UserSpeechToText")]
+        public string SpeechToText(Stream userAudio)
+        {
+            string speechInText = string.Empty;
+
+            string requestURI = "https://speech.platform.bing.com/speech/recognition/interactive/cognitiveservices/v1?language=en-US&format=detailed";
+            HttpWebRequest request = null;
+            request = (HttpWebRequest)HttpWebRequest.Create(requestURI);
+            request.SendChunked = true;
+            request.Accept = @"application/json;text/xml";
+            request.Method = "POST";
+            request.ProtocolVersion = HttpVersion.Version11;
+            request.ContentType = @"audio/wav; codec=audio/pcm; samplerate=16000";
+            request.Headers["Ocp-Apim-Subscription-Key"] = BINGSPEECHAPIKEY;
+
+            // Send an audio file by 1024 byte chunks
+            using (FileStream fs = new FileStream(@"C:\Users\Sachin13390\Desktop\VoiceSamples\joey.wav", FileMode.Open, FileAccess.Read))
+            {
+
+                /*
+                * Open a request stream and write 1024 byte chunks in the stream one at a time.
+                */
+                byte[] buffer = null;
+                int bytesRead = 0;
+                using (Stream requestStream = request.GetRequestStream())
+                {
+                    /*
+                    * Read 1024 raw bytes from the input audio file.
+                    */
+                    buffer = new Byte[checked((uint)Math.Min(1024, (int)fs.Length))];
+                    while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) != 0)
+                    {
+                        requestStream.Write(buffer, 0, bytesRead);
+                    }
+
+                    // Flush
+                    requestStream.Flush();
+                }
+            }
+            using (WebResponse response = request.GetResponse())
+            {
+                Console.WriteLine(((HttpWebResponse)response).StatusCode);
+
+                using (StreamReader sr = new StreamReader(response.GetResponseStream()))
+                {
+                    speechInText = sr.ReadToEnd();
+                }
+            }
+            return speechInText;
+        }
 
         public static byte[] ConvertWavTo16000Hz16BitMonoWav(byte[] inArray)
         {
