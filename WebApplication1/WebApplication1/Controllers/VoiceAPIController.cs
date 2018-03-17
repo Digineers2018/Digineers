@@ -33,6 +33,10 @@ namespace WebApplication1.Controllers
 
         const string BINGSPEECHAPIKEY = "ffb6a06f528441b891be8f0538e67624";
 
+        const string COGNITIVESPEECHAPIKEY = "05d22648c9544427aa99bc5419a6d79c";
+
+
+
 
         //    /api/VoiceAPI/RegisterUser
         [HttpGet]
@@ -40,9 +44,9 @@ namespace WebApplication1.Controllers
         public async Task<string> RegisterUser(byte[] bytes)
         {
             #region TestBed
-            if (bytes.Length == 0)
+            if (bytes == null || bytes.Length == 0)
             {
-                bytes = File.ReadAllBytes(@"C:\Users\Sachin13390\Desktop\VoiceSamples\joey.wav");
+                bytes = File.ReadAllBytes(@"C:\Users\Sachin\Desktop\VoiceSamples\brian.wav");
             }
             #endregion
 
@@ -50,7 +54,7 @@ namespace WebApplication1.Controllers
             var queryString = HttpUtility.ParseQueryString(string.Empty);
 
             // Request headers
-            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "05d22648c9544427aa99bc5419a6d79c");
+            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
 
             var identificationProfileURI = "https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles?" + queryString;
             HttpResponseMessage response;
@@ -80,7 +84,7 @@ namespace WebApplication1.Controllers
 
                         // Request headers
                         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                        client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "05d22648c9544427aa99bc5419a6d79c");
+                        client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
                         // Request parameters
                         queryString["shortAudio"] = "true";
                         var enrollmentProfileUri = string.Format("https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles/{0}/enroll?{1}", profileId, queryString);
@@ -98,7 +102,6 @@ namespace WebApplication1.Controllers
                             if (operationLocation.Count() == 1)
                             {
                                 operationUrl = operationLocation.First();
-                                OperationLocation location = new OperationLocation();
                             }
                             else
                             {
@@ -114,7 +117,7 @@ namespace WebApplication1.Controllers
                     {
                         client = new HttpClient();
 
-                        client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "05d22648c9544427aa99bc5419a6d79c");
+                        client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
 
                         response = await client.GetAsync(operationUrl);
                         var operationStatusResponseData = await response.Content.ReadAsAsync<ExpandoObject>();
@@ -128,6 +131,140 @@ namespace WebApplication1.Controllers
 
             }
             return SUCCESSFULL;
+        }
+
+        //    /api/VoiceAPI/IndentifyUser
+        [HttpGet]
+        [ActionName("IndentifyUser")]
+        public async Task<string> IndentifyUser(Stream userAudioStream)
+        {
+            try
+            {
+                // Get all Profiles
+
+                string allProfileID = "";
+                string matchedProfileID = "0be37623-ad65-45dc-ad42-8dd5b461d3c7";
+                string operationUrl = string.Empty;
+
+                if (userAudioStream == null)
+                {
+                    string audioFilePath = @"C:\Users\Sachin\Desktop\Recording_2_.wav";
+                    userAudioStream = File.OpenRead(audioFilePath);
+                }
+
+                // Getting All Profile IDS
+
+                var client = new HttpClient();
+                var queryString = HttpUtility.ParseQueryString(string.Empty);
+
+                // Request headers
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
+
+                var enrollmentVerifyProfileUri = "https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles?" + queryString;
+
+                var response = await client.GetAsync(enrollmentVerifyProfileUri);
+
+                var profileIdResponseData = await response.Content.ReadAsAsync<List<Object>>();
+
+                foreach (var foundProfileID in profileIdResponseData)
+                {
+                    allProfileID = allProfileID + "," + (foundProfileID as Newtonsoft.Json.Linq.JObject)["identificationProfileId"].ToString();
+                }
+
+                allProfileID = allProfileID.Substring(1);
+
+
+
+                client = new HttpClient();
+                queryString = HttpUtility.ParseQueryString(string.Empty);
+
+                // Request headers
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
+
+                // Request parameters
+                queryString["shortAudio"] = "true";
+                enrollmentVerifyProfileUri = string.Format("https://westus.api.cognitive.microsoft.com/spid/v1.0/identify?identificationProfileIds={0}&{1}", allProfileID, queryString);
+
+                var content = new MultipartFormDataContent("Upload----" + DateTime.Now.ToString("u"));
+
+                Byte[] bytes;
+                using (MemoryStream userAudioStreamRecvd = new MemoryStream())
+                {
+                    userAudioStream.CopyTo(userAudioStreamRecvd);
+                    bytes = ConvertWavTo16000Hz16BitMonoWav(userAudioStreamRecvd.ToArray());
+                }
+                Stream audioStream = new MemoryStream(bytes);
+
+                content.Add(new StreamContent(audioStream), "Data", "testFile_" + DateTime.Now.ToString("u"));
+                response = await client.PostAsync(enrollmentVerifyProfileUri, content).ConfigureAwait(false);
+                if (response.StatusCode == HttpStatusCode.Accepted)
+                {
+                    IEnumerable<string> operationLocation = response.Headers.GetValues("Operation-Location");
+                    if (operationLocation.Count() == 1)
+                    {
+                        operationUrl = operationLocation.First();
+                    }
+                    else
+                    {
+                        return FAILURE;
+                    }
+                }
+
+                if (string.IsNullOrEmpty(operationUrl) == false)
+                {
+                    client = new HttpClient();
+
+                    client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
+
+                    response = await client.GetAsync(operationUrl);
+                    var operationStatusResponseData = await response.Content.ReadAsAsync<ExpandoObject>();
+                    return operationStatusResponseData.First().Value.ToString();
+                }
+
+                return SUCCESSFULL;
+            }
+            catch (Exception exception)
+            {
+                return FAILURE;
+            }
+        }
+
+
+        //    /api/VoiceAPI/DeleteAllEnrolment
+        [HttpGet]
+        [ActionName("DeleteAllEnrolment")]
+        public async Task<String> DeleteAllEnrolment(Stream userAudio)
+        {
+            var client = new HttpClient();
+            string allProfileID = "";
+            var queryString = HttpUtility.ParseQueryString(string.Empty);
+
+            // Request headers
+            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
+
+            var enrollmentVerifyProfileUri = "https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles?" ;
+
+            var response = await client.GetAsync(enrollmentVerifyProfileUri);
+
+            var profileIdResponseData = await response.Content.ReadAsAsync<List<Object>>();
+
+            foreach (var foundProfileID in profileIdResponseData)
+            {
+                allProfileID = (foundProfileID as Newtonsoft.Json.Linq.JObject)["identificationProfileId"].ToString();
+
+                client = new HttpClient();
+
+                // Request headers
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
+
+                var uri = "https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles/" + allProfileID;
+
+                response = await client.DeleteAsync(uri);
+                var deleteOperationStatus = await response.Content.ReadAsAsync<ExpandoObject>();
+            }
+
+            return "";
         }
 
         //    /api/VoiceAPI/UserSpeechToText
