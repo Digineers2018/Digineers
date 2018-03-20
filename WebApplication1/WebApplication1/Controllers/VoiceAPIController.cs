@@ -46,7 +46,7 @@ namespace WebApplication1.Controllers
             #region TestBed
             if (userAudioStream == null)
             {
-                string audioFilePath = @"C:\Users\Sachin\Desktop\VoiceSamples\brian.wav";
+                string audioFilePath = @"C:\Users\Sachin13390\Desktop\Speech3.wav";
                 userAudioStream = File.OpenRead(audioFilePath);
             }
             #endregion
@@ -92,8 +92,13 @@ namespace WebApplication1.Controllers
 
                         var content = new MultipartFormDataContent("Upload----" + DateTime.Now.ToString("u"));
                         Byte[] bytes;
+
+                        Stream userAudioTemp = null;
+                        userAudioTemp = userAudioStream;
+
                         using (MemoryStream userAudioStreamRecvd = new MemoryStream())
                         {
+                            userAudioStream.Position = 0;
                             userAudioStream.CopyTo(userAudioStreamRecvd);
                             bytes = ConvertWavTo16000Hz16BitMonoWav(userAudioStreamRecvd.ToArray());
                         }
@@ -153,7 +158,7 @@ namespace WebApplication1.Controllers
 
                 if (userAudioStream == null)
                 {
-                    string audioFilePath = @"C:\Users\Sachin\Desktop\Recording_2_.wav";
+                    string audioFilePath = @"C:\Users\Sachin13390\Desktop\Speech2.wav";
                     userAudioStream = File.OpenRead(audioFilePath);
                 }
 

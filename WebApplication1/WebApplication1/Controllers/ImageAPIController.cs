@@ -104,24 +104,24 @@ namespace WebApplication1.Controllers
             try
             {
                 #region TestBed
-                //if (listUserImages == null)
-                //{
-                //    listUserImages = new List<Stream>();
+                if (listUserImages == null)
+                {
+                    listUserImages = new List<Stream>();
 
-                //    string directoryPath = @"C:\Users\Sachin13390\Desktop\Face_Data";
+                    string directoryPath = @"C:\Users\Sachin13390\Desktop\Face_Data";
 
-                //    string[] allDirectory = Directory.GetDirectories(directoryPath);
+                    string[] allDirectory = Directory.GetDirectories(directoryPath);
 
-                //    foreach (string dir in allDirectory)
-                //    {
-                //        personName = Path.GetFileName(dir);
-                //        string[] file_Paths = Directory.GetFiles(dir);
-                //        foreach (string filePath in file_Paths)
-                //        {
-                //            listUserImages.Add(GetImageStream(filePath));
-                //        }
-                //    }
-                //}
+                    foreach (string dir in allDirectory)
+                    {
+                        personName = Path.GetFileName(dir);
+                        string[] file_Paths = Directory.GetFiles(dir);
+                        foreach (string filePath in file_Paths)
+                        {
+                            listUserImages.Add(GetImageStream(filePath));
+                        }
+                    }
+                }
                 #endregion
 
                 #region Images
@@ -162,8 +162,8 @@ namespace WebApplication1.Controllers
         public async Task<string> IdentifyUser(Stream imageStream)
         {
             #region TestBed
-            //string imageFilePath = @"C:\Users\Sachin13390\Desktop\images.jpg";
-            //imageStream = GetImageStream(imageFilePath);
+            string imageFilePath = @"C:\Users\Sachin13390\Desktop\images.jpg";
+            imageStream = GetImageStream(imageFilePath);
             #endregion
 
             try
