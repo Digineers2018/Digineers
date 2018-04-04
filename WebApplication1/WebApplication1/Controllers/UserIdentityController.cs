@@ -46,12 +46,17 @@ namespace WebApplication1.Controllers
         public void ProcessRegistrationVideo(Stream userRegisterVideo)
         {
             if(userRegisterVideo == null)
-            { }
+            {
+                #region  testbed
+                userRegisterVideo = new FileStream("", FileMode.Open);
+                #endregion  
+            }
             else
             {
                 uploadFileToStorage(userRegisterVideo, "userVideo.mp4");
                 var userRegistrationAudioLocation = disintegrateVideoToAudio(string.Concat(storedFilePrefix, "userVideo.mp4"));
                 List<string> userRegistrationImageLocations = disintegrateVideoToImages(string.Concat(storedFilePrefix, "userVideo.mp4"));
+                var textSpoken = speechToText(new FileStream(userRegistrationAudioLocation, FileMode.Open));
             }
         }
 
