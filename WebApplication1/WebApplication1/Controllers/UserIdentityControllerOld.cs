@@ -251,31 +251,6 @@ namespace WebApplication1.Controllers
             //return SUCCESSFULL;
         }
 
-        //    /api/UserIdentityController/HandleVideo
-        [HttpGet]
-        [ActionName("HandleVideo")]
-        public void HandleVideo(Stream userRegisterVideo)
-        {
-
-        }
-
-        Stream disintegrateVideo(Stream userRegistrationVideo)
-        {
-            var extractHelper = new NReco.VideoConverter.FFMpegConverter();
-            //var inputFileName = @"C:\Users\Sachin13390\Desktop\Reg.mp4";
-            var inputFileName = "http://stoarageaccount.blob.core.windows.net/clips/VID_20180403_153456090.mp4";
-            Stream audioStream = new MemoryStream();
-            if (userRegistrationVideo == null)
-            {
-               extractHelper.ConvertMedia(inputFileName, audioStream, "wav");
-            }
-            audioStream.Position = 0;
-            uploadFileToStorage(audioStream, "userRegVoice.wav");
-
-            return audioStream;
-        }
-
-
         //    /api/VoiceAPI/IndentifyUser
         [HttpGet]
         [ActionName("IndentifyUser")]
@@ -480,65 +455,6 @@ namespace WebApplication1.Controllers
             }
             return speechInText;
         }
-
-        public static byte[] ConvertWavTo16000Hz16BitMonoWav(byte[] inArray)
-        {
-            //WaveFileWriter w = null;
-            //try
-            {
-                using (var mem = new MemoryStream(inArray))
-                {
-                    using (var reader = new WaveFileReader(mem))
-                    {
-                        using (var converter = WaveFormatConversionStream.CreatePcmStream(reader))
-                        {
-                            using (var upsampler = new WaveFormatConversionStream(new WaveFormat(16000, 16, 1), converter))
-                            {
-                                byte[] data;
-                                using (var m = new MemoryStream())
-                                {
-                                    upsampler.CopyTo(m);
-                                    data = m.ToArray();
-                                }
-                                using (var m = new MemoryStream())
-                                {
-                                    // to create a propper WAV header (44 bytes), which begins with RIFF 
-                                    var w = new WaveFileWriter(m, upsampler.WaveFormat);
-                                    // append WAV data body
-                                    w.Write(data, 0, data.Length);
-                                    w.Dispose();
-                                    return m.ToArray();
-
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        private static void uploadFileToStorage(Stream fileStream, string fileName)
-        {
-            // Create storagecredentials object by reading the values from the configuration (appsettings.json)
-            StorageCredentials storageCredentials = new StorageCredentials("stoarageaccount", "586DxL4HL0ayGYspCRCRAEizJTLgm1z7t9wlBcBVxzvwXQ5aJ5SGzk9sQbjZ7HdetuY2lN9GRJbeVawSdOSg0Q==");
-
-            // Create cloudstorage account by passing the storagecredentials
-            CloudStorageAccount storageAccount = new CloudStorageAccount(storageCredentials, true);
-
-            // Create the blob client.
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
-
-            // Get reference to the blob container by passing the name by reading the value from the configuration (appsettings.json)
-            CloudBlobContainer container = blobClient.GetContainerReference("clips");
-
-            // Get the reference to the block blob from the container
-            CloudBlockBlob blockBlob = container.GetBlockBlobReference(fileName);
-
-            // Upload the file
-             blockBlob.UploadFromStream(fileStream);
-
-            
-        }
-
+        
     }
 }
