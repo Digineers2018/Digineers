@@ -38,396 +38,121 @@ namespace WebApplication1.Controllers
         string personGroupId = "12111993133902018";
         const string FACE_API_ENDPOINT = "https://westcentralus.api.cognitive.microsoft.com/face/v1.0";
         private readonly IFaceServiceClient faceServiceClient = new FaceServiceClient(IMAGE_SUBSCRIPTION_KEY, FACE_API_ENDPOINT);
+        const string storedFilePrefix = "http://stoarageaccount.blob.core.windows.net/clips/";
 
-        static byte[] GetImageAsByteArray(string imageFilePath)
+        //    /api/UserIdentityController/ProcessRegistrationVideo
+        [HttpPost]
+        [ActionName("ProcessRegistrationVideo")]
+        public void ProcessRegistrationVideo(Stream userRegisterVideo)
         {
-            FileStream fileStream = new FileStream(imageFilePath, FileMode.Open, FileAccess.Read);
-            BinaryReader binaryReader = new BinaryReader(fileStream);
-            return binaryReader.ReadBytes((int)fileStream.Length);
-        }
-
-        private async Task<Face[]> UploadAndDetectFaces(Stream imageFileStream)
-        {
-            // The list of Face attributes to return.
-            IEnumerable<FaceAttributeType> faceAttributes =
-                new FaceAttributeType[] { FaceAttributeType.Gender, FaceAttributeType.Age, FaceAttributeType.Smile, FaceAttributeType.Emotion, FaceAttributeType.Glasses, FaceAttributeType.Hair };
-
-            // Call the Face API.
-            try
+            if(userRegisterVideo == null)
+            { }
+            else
             {
-                Face[] faces = await faceServiceClient.DetectAsync(imageFileStream, returnFaceId: true, returnFaceLandmarks: false, returnFaceAttributes: faceAttributes);
-                return faces;
-            }
-            // Catch and display Face API errors.
-            catch (FaceAPIException f)
-            {
-                //MessageBox.Show(f.ErrorMessage, f.ErrorCode);
-                return new Face[0];
-            }
-            // Catch and display all other errors.
-            catch (Exception e)
-            {
-                //MessageBox.Show(e.Message, "Error");
-                return new Face[0];
+                uploadFileToStorage(userRegisterVideo, "userVideo.mp4");
+                var userRegistrationAudioLocation = disintegrateVideoToAudio(string.Concat(storedFilePrefix, "userVideo.mp4"));
+                List<string> userRegistrationImageLocations = disintegrateVideoToImages(string.Concat(storedFilePrefix, "userVideo.mp4"));
             }
         }
 
-        private void CreateUserGroup()
+        private string disintegrateVideoToAudio(string userRegistrationVideoLocation)
         {
-            // To use only once
-
-            //try
-            //{
-            //    await faceServiceClient.DeletePersonGroupAsync(personGroupId);
-            //}
-            //catch (Exception e)
-            //{
-            //    string exception = e.ToString();
-            //}
-
-            //await faceServiceClient.CreatePersonGroupAsync(personGroupId, groupName);
-
-        }
-
-        private Stream GetImageStream(string imageFilePath)
-        {
-            Stream imageFileStream = File.OpenRead(imageFilePath);
-
-            return imageFileStream;
-        }
-
-
-        //    /api/VoiceAPI/RegisterUser
-        [HttpGet]
-        [ActionName("RegisterUser")]
-        public void RegisterUser()
-        {
-            #region TestBed
-            //if (userAudioStream == null)
-            //{
-            //    string audioFilePath = @"C:\Users\Sachin\Desktop\VoiceSamples\brian.wav";
-            //    userAudioStream = File.OpenRead(audioFilePath);
-            //}
-            //if (listUserImages == null)
-            //{
-            //    listUserImages = new List<Stream>();
-
-            //    string directoryPath = @"C:\Users\Sachin13390\Desktop\Face_Data";
-
-            //    string[] allDirectory = Directory.GetDirectories(directoryPath);
-
-            //    foreach (string dir in allDirectory)
-            //    {
-            //        personName = Path.GetFileName(dir);
-            //        string[] file_Paths = Directory.GetFiles(dir);
-            //        foreach (string filePath in file_Paths)
-            //        {
-            //            listUserImages.Add(GetImageStream(filePath));
-            //        }
-            //    }
-            //}
-            #endregion
-
-            try
+            if (String.IsNullOrWhiteSpace(userRegistrationVideoLocation) == false)
             {
-                Stream userAudioStream = disintegrateVideo(null);
-
-                //var client = new HttpClient();
-                //var queryString = HttpUtility.ParseQueryString(string.Empty);
-
-                //// Request headers
-                //client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
-
-                //var identificationProfileURI = "https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles?" + queryString;
-                //HttpResponseMessage response;
-
-                //// Request body
-                //byte[] byteData = Encoding.UTF8.GetBytes("{\"locale\":\"en-us\",}");
-                //string profileId = string.Empty;
-                //string operationUrl = string.Empty;
-                //using (var content = new ByteArrayContent(byteData))
-                //{
-                //    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                //    response = await client.PostAsync(identificationProfileURI, content);
-                //    var profileIdResponseData = await response.Content.ReadAsAsync<ExpandoObject>();
-                //    if (profileIdResponseData.Count() > 0)
-                //    {
-                //        profileId = profileIdResponseData.First().Value.ToString();
-                //    }
-                //}
-                //try
-                //{
-                //    if (string.IsNullOrEmpty(profileId) == false)
-                //    {
-                //        for (int enrolmentCount = 0; enrolmentCount < 3; enrolmentCount++)
-                //        {
-
-                //            client = new HttpClient();
-
-                //            // Request headers
-                //            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                //            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
-                //            // Request parameters
-                //            queryString["shortAudio"] = "true";
-                //            var enrollmentProfileUri = string.Format("https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles/{0}/enroll?{1}", profileId, queryString);
-
-                //            var content = new MultipartFormDataContent("Upload----" + DateTime.Now.ToString("u"));
-                //            Byte[] bytes;
-                //            using (MemoryStream userAudioStreamRecvd = new MemoryStream())
-                //            {
-                //                userAudioStream.CopyTo(userAudioStreamRecvd);
-                //                userAudioStream.Position = 0;
-                //                bytes = ConvertWavTo16000Hz16BitMonoWav(userAudioStreamRecvd.ToArray());
-                //                userAudioStreamRecvd.Position = 0;
-                //            }
-
-                //            Stream audioStream = new MemoryStream(bytes);
-                //            content.Add(new StreamContent(audioStream), "Data", "testFile_" + DateTime.Now.ToString("u"));
-                //            response = await client.PostAsync(enrollmentProfileUri, content).ConfigureAwait(false);
-                //            if (response.StatusCode == HttpStatusCode.Accepted)
-                //            {
-                //                IEnumerable<string> operationLocation = response.Headers.GetValues("Operation-Location");
-                //                if (operationLocation.Count() == 1)
-                //                {
-                //                    operationUrl = operationLocation.First();
-                //                }
-                //                else
-                //                {
-                //                    return FAILURE;
-                //                }
-                //            }
-
-                //        }
-
-                //        /////////// 3 STEP operationUrl
-                //        ExpandoObject operationStatusResponseData = null;
-                //        if (string.IsNullOrEmpty(operationUrl) == false)
-                //        {
-                //            client = new HttpClient();
-
-                //            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
-
-                //            response = await client.GetAsync(operationUrl);
-                //            operationStatusResponseData = await response.Content.ReadAsAsync<ExpandoObject>();
-                //        }
-
-                //        //#region Images
-                //        //if (operationStatusResponseData != null && operationStatusResponseData.Count() > 0 && operationStatusResponseData.First().Value.ToString() == "SUCCEEDED" || operationStatusResponseData.First().Value.ToString() == "RUNNING")
-                //        //{
-                //        //    string personName = SpeechToText(userAudioStream);
-                //        //    if (string.IsNullOrEmpty(personName) == false)
-                //        //    {
-                //        //        CreatePersonResult person = await faceServiceClient.CreatePersonInPersonGroupAsync(personGroupId, personName);
-
-                //        //        foreach (Stream imageStream in listUserImages)
-                //        //        {
-                //        //            await faceServiceClient.AddPersonFaceInPersonGroupAsync(personGroupId, person.PersonId, imageStream);
-                //        //        }
-
-                //        //        await faceServiceClient.TrainPersonGroupAsync(personGroupId);
-
-                //        //        TrainingStatus trainingStatus = null;
-                //        //        while (true)
-                //        //        {
-                //        //            trainingStatus = await faceServiceClient.GetPersonGroupTrainingStatusAsync(personGroupId);
-
-                //        //            if (trainingStatus.Status != Microsoft.ProjectOxford.Face.Contract.Status.Running)
-                //        //            {
-                //        //                break;
-                //        //            }
-                //        //            await Task.Delay(1000);
-                //        //        }
-                //        //    }
-                //        //}
-                //        //#endregion
-
-                //        return operationStatusResponseData.First().Value.ToString();
-                //    }
+                var userRegistrationAudioLocation = "userAudio.wav";
+                var extractHelper = new NReco.VideoConverter.FFMpegConverter();
+                Stream audioStream = new MemoryStream();
+                extractHelper.ConvertMedia(userRegistrationVideoLocation, audioStream, "wav");
+                audioStream.Position = 0;
+                uploadFileToStorage(audioStream, userRegistrationAudioLocation);
+                return string.Concat(storedFilePrefix, userRegistrationAudioLocation);
             }
-            catch (Exception enrollmentException)
+            else
             {
-
+                return string.Empty;
             }
-            //return SUCCESSFULL;
         }
 
-        //    /api/UserIdentityController/HandleVideo
-        [HttpGet]
-        [ActionName("HandleVideo")]
-        public void HandleVideo(Stream userRegisterVideo)
+        private List<string> disintegrateVideoToImages(string userRegistrationVideoLocation)
         {
-
-        }
-
-        Stream disintegrateVideo(Stream userRegistrationVideo)
-        {
-            var extractHelper = new NReco.VideoConverter.FFMpegConverter();
-            //var inputFileName = @"C:\Users\Sachin13390\Desktop\Reg.mp4";
-            var inputFileName = "http://stoarageaccount.blob.core.windows.net/clips/VID_20180403_153456090.mp4";
-            Stream audioStream = new MemoryStream();
-            if (userRegistrationVideo == null)
+            List<string> userRegImageLocations = new List<string>();
+            if (String.IsNullOrWhiteSpace(userRegistrationVideoLocation) == false)
             {
-               extractHelper.ConvertMedia(inputFileName, audioStream, "wav");
-            }
-            audioStream.Position = 0;
-            uploadFileToStorage(audioStream, "userRegVoice.wav");
-
-            return audioStream;
-        }
-
-
-        //    /api/VoiceAPI/IndentifyUser
-        [HttpGet]
-        [ActionName("IndentifyUser")]
-        public async Task<string> IndentifyUser(Stream userAudioStream, Stream imageStream)
-        {
-            try
-            {
-                // Get all Profiles
-
-                string allProfileID = "";
-                string matchedProfileID = "0be37623-ad65-45dc-ad42-8dd5b461d3c7";
-                string operationUrl = string.Empty;
-                #region TestBed
-                //if (userAudioStream == null)
-                //{
-                //    string audioFilePath = @"C:\Users\Sachin\Desktop\Recording_2_.wav";
-                //    userAudioStream = File.OpenRead(audioFilePath);
-                //}
-                //string imageFilePath = @"C:\Users\Sachin13390\Desktop\images.jpg";
-                //imageStream = GetImageStream(imageFilePath);
-                #endregion
-
-                // Getting All Profile IDS
-
-                var client = new HttpClient();
-                var queryString = HttpUtility.ParseQueryString(string.Empty);
-
-                // Request headers
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
-
-                var enrollmentVerifyProfileUri = "https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles?" + queryString;
-
-                var response = await client.GetAsync(enrollmentVerifyProfileUri);
-
-                var profileIdResponseData = await response.Content.ReadAsAsync<List<Object>>();
-
-                foreach (var foundProfileID in profileIdResponseData)
+                var userRegistrationImageLocation = "userImage_#.jpg";
+                var extractHelper = new NReco.VideoConverter.FFMpegConverter();
+                List<float> frameLocations = new List<float>() { 0.3f, 1.0F, 1.5f};
+                foreach (float frameLocation in frameLocations)
                 {
-                    allProfileID = allProfileID + "," + (foundProfileID as Newtonsoft.Json.Linq.JObject)["identificationProfileId"].ToString();
-                }
-
-                allProfileID = allProfileID.Substring(1);
-
-
-
-                client = new HttpClient();
-                queryString = HttpUtility.ParseQueryString(string.Empty);
-
-                // Request headers
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
-
-                // Request parameters
-                queryString["shortAudio"] = "true";
-                enrollmentVerifyProfileUri = string.Format("https://westus.api.cognitive.microsoft.com/spid/v1.0/identify?identificationProfileIds={0}&{1}", allProfileID, queryString);
-
-                var content = new MultipartFormDataContent("Upload----" + DateTime.Now.ToString("u"));
-
-                Byte[] bytes;
-                using (MemoryStream userAudioStreamRecvd = new MemoryStream())
-                {
-                    userAudioStream.CopyTo(userAudioStreamRecvd);
-                    bytes = ConvertWavTo16000Hz16BitMonoWav(userAudioStreamRecvd.ToArray());
-                }
-                Stream audioStream = new MemoryStream(bytes);
-
-                content.Add(new StreamContent(audioStream), "Data", "testFile_" + DateTime.Now.ToString("u"));
-                response = await client.PostAsync(enrollmentVerifyProfileUri, content).ConfigureAwait(false);
-                if (response.StatusCode == HttpStatusCode.Accepted)
-                {
-                    IEnumerable<string> operationLocation = response.Headers.GetValues("Operation-Location");
-                    if (operationLocation.Count() == 1)
+                    using (Stream imageStream = new MemoryStream())
                     {
-                        operationUrl = operationLocation.First();
+                        extractHelper.GetVideoThumbnail(userRegistrationVideoLocation, imageStream, frameLocation);
+                        imageStream.Position = 0;
+                        uploadFileToStorage(imageStream, userRegistrationImageLocation.Replace("#", frameLocations.IndexOf(frameLocation).ToString()));
                     }
-                    else
+                    userRegImageLocations.Add(string.Concat(storedFilePrefix, userRegistrationImageLocation.Replace("#", frameLocations.IndexOf(frameLocation).ToString())));
+                }
+            }
+            return userRegImageLocations;
+        }
+
+        private static void uploadFileToStorage(Stream fileStream, string fileName)
+        {
+            // Create storagecredentials object by reading the values from the configuration (appsettings.json)
+            StorageCredentials storageCredentials = new StorageCredentials("stoarageaccount", "586DxL4HL0ayGYspCRCRAEizJTLgm1z7t9wlBcBVxzvwXQ5aJ5SGzk9sQbjZ7HdetuY2lN9GRJbeVawSdOSg0Q==");
+
+            // Create cloudstorage account by passing the storagecredentials
+            CloudStorageAccount storageAccount = new CloudStorageAccount(storageCredentials, true);
+
+            // Create the blob client.
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+
+            // Get reference to the blob container by passing the name by reading the value from the configuration (appsettings.json)
+            CloudBlobContainer container = blobClient.GetContainerReference("clips");
+
+            // Get the reference to the block blob from the container
+            CloudBlockBlob blockBlob = container.GetBlockBlobReference(fileName);
+
+            // Upload the file
+            blockBlob.UploadFromStream(fileStream);
+
+
+        }
+
+        private static byte[] ConvertWavTo16000Hz16BitMonoWav(byte[] inArray)
+        {
+            {
+                using (var mem = new MemoryStream(inArray))
+                {
+                    using (var reader = new WaveFileReader(mem))
                     {
-                        return FAILURE;
+                        using (var converter = WaveFormatConversionStream.CreatePcmStream(reader))
+                        {
+                            using (var upsampler = new WaveFormatConversionStream(new WaveFormat(16000, 16, 1), converter))
+                            {
+                                byte[] data;
+                                using (var m = new MemoryStream())
+                                {
+                                    upsampler.CopyTo(m);
+                                    data = m.ToArray();
+                                }
+                                using (var m = new MemoryStream())
+                                {
+                                    // to create a propper WAV header (44 bytes), which begins with RIFF 
+                                    var w = new WaveFileWriter(m, upsampler.WaveFormat);
+                                    // append WAV data body
+                                    w.Write(data, 0, data.Length);
+                                    w.Dispose();
+                                    return m.ToArray();
+
+                                }
+                            }
+                        }
                     }
                 }
-
-                if (string.IsNullOrEmpty(operationUrl) == false)
-                {
-                    client = new HttpClient();
-
-                    client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
-
-                    response = await client.GetAsync(operationUrl);
-                    var operationStatusResponseData = await response.Content.ReadAsAsync<ExpandoObject>();
-                    return operationStatusResponseData.First().Value.ToString();
-                }
-
-                #region Image
-                Face[] faces = await UploadAndDetectFaces(imageStream);
-                var faceIds = faces.Select(face => face.FaceId).ToArray();
-
-                foreach (var identifyResult in await faceServiceClient.IdentifyAsync(personGroupId, faceIds))
-                {
-                    if (identifyResult.Candidates.Length != 0)
-                    {
-                        var candidateId = identifyResult.Candidates[0].PersonId;
-                        var person = await faceServiceClient.GetPersonInPersonGroupAsync(personGroupId, candidateId);
-                        return person.Name;
-                    }
-                }
-                return USERCANNOTBEIDENTIFIED;
-                #endregion
-
-            }
-            catch (Exception exception)
-            {
-                return FAILURE;
             }
         }
 
-        //    /api/VoiceAPI/DeleteAllEnrolment
-        [HttpGet]
-        [ActionName("DeleteAllEnrolment")]
-        public async Task<String> DeleteAllEnrolment(Stream userAudio)
-        {
-            var client = new HttpClient();
-            string allProfileID = "";
-            var queryString = HttpUtility.ParseQueryString(string.Empty);
-
-            // Request headers
-            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
-
-            var enrollmentVerifyProfileUri = "https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles?";
-
-            var response = await client.GetAsync(enrollmentVerifyProfileUri);
-
-            var profileIdResponseData = await response.Content.ReadAsAsync<List<Object>>();
-
-            foreach (var foundProfileID in profileIdResponseData)
-            {
-                allProfileID = (foundProfileID as Newtonsoft.Json.Linq.JObject)["identificationProfileId"].ToString();
-
-                client = new HttpClient();
-
-                // Request headers
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
-
-                var uri = "https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles/" + allProfileID;
-
-                response = await client.DeleteAsync(uri);
-                var deleteOperationStatus = await response.Content.ReadAsAsync<ExpandoObject>();
-            }
-
-            return "";
-        }
-
-        private string SpeechToText(Stream userAudio)
+        private string speechToText(Stream userAudio)
         {
             string speechInText = string.Empty;
 
@@ -474,70 +199,11 @@ namespace WebApplication1.Controllers
                     speechInText = sr.ReadToEnd();
                 }
             }
-            if(speechInText.ToLower().Contains("my name is") == true)
+            if (speechInText.ToLower().Contains("my name is") == true)
             {
                 speechInText = speechInText.ToLower().Replace("my name is", "");
             }
             return speechInText;
-        }
-
-        public static byte[] ConvertWavTo16000Hz16BitMonoWav(byte[] inArray)
-        {
-            //WaveFileWriter w = null;
-            //try
-            {
-                using (var mem = new MemoryStream(inArray))
-                {
-                    using (var reader = new WaveFileReader(mem))
-                    {
-                        using (var converter = WaveFormatConversionStream.CreatePcmStream(reader))
-                        {
-                            using (var upsampler = new WaveFormatConversionStream(new WaveFormat(16000, 16, 1), converter))
-                            {
-                                byte[] data;
-                                using (var m = new MemoryStream())
-                                {
-                                    upsampler.CopyTo(m);
-                                    data = m.ToArray();
-                                }
-                                using (var m = new MemoryStream())
-                                {
-                                    // to create a propper WAV header (44 bytes), which begins with RIFF 
-                                    var w = new WaveFileWriter(m, upsampler.WaveFormat);
-                                    // append WAV data body
-                                    w.Write(data, 0, data.Length);
-                                    w.Dispose();
-                                    return m.ToArray();
-
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        private static void uploadFileToStorage(Stream fileStream, string fileName)
-        {
-            // Create storagecredentials object by reading the values from the configuration (appsettings.json)
-            StorageCredentials storageCredentials = new StorageCredentials("stoarageaccount", "586DxL4HL0ayGYspCRCRAEizJTLgm1z7t9wlBcBVxzvwXQ5aJ5SGzk9sQbjZ7HdetuY2lN9GRJbeVawSdOSg0Q==");
-
-            // Create cloudstorage account by passing the storagecredentials
-            CloudStorageAccount storageAccount = new CloudStorageAccount(storageCredentials, true);
-
-            // Create the blob client.
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
-
-            // Get reference to the blob container by passing the name by reading the value from the configuration (appsettings.json)
-            CloudBlobContainer container = blobClient.GetContainerReference("clips");
-
-            // Get the reference to the block blob from the container
-            CloudBlockBlob blockBlob = container.GetBlockBlobReference(fileName);
-
-            // Upload the file
-             blockBlob.UploadFromStream(fileStream);
-
-            
         }
     }
 }

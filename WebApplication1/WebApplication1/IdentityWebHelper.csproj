@@ -206,6 +206,7 @@
     <Compile Include="Areas\HelpPage\XmlDocumentationProvider.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\UserIdentityController.cs" />
+    <Compile Include="Controllers\UserIdentityControllerOld.cs" />
     <Compile Include="Controllers\ValuesController.cs" />
     <Compile Include="Controllers\ImageAPIController.cs" />
     <Compile Include="Controllers\VoiceAPIController.cs" />
@@ -270,6 +271,7 @@
   <ItemGroup>
     <Folder Include="App_Data\" />
     <Folder Include="Models\" />
+    <Folder Include="Views\UserIdentity\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="fonts\glyphicons-halflings-regular.woff" />
