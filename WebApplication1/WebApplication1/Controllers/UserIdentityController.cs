@@ -46,8 +46,9 @@ namespace WebApplication1.Controllers
         //    /api/UserIdentity/ProcessRegistrationVideo
         [HttpPost]
         [ActionName("ProcessRegistrationVideo")]
-        public void ProcessRegistrationVideo()
+        public String ProcessRegistrationVideo()
         {
+            string speechText = string.Empty;
             Stream userRegisterVideo = null;
             if (userRegisterVideo == null)
             {
@@ -56,16 +57,16 @@ namespace WebApplication1.Controllers
 
                 //string videoFilePath = @"C:\Users\Sachin13390\Desktop\Reg.mp4";
 
-                //var userRegistrationAudioLocation = disintegrateVideoToAudio(videoFilePath);
+                var userRegistrationAudioLocation = disintegrateVideoToAudio(videoFilePath);
 
                 //Stream videoFileStream = new FileStream(@"C:\Users\Sachin13390\Desktop\Reg.mp4", FileMode.Open);
                 //videoFileStream.Position = 0;
                 //uploadFileToStorage(videoFileStream, "Reg.mp4");
                 //List<string> userRegistrationImageLocations = disintegrateVideoToImages(videoFilePath);
 
-                //Stream userRegistrationAudio = new MemoryStream();
-                //userRegistrationAudio = downloadFileFromStorage(userRegistrationAudioLocation, userRegistrationAudio);
-                //userRegistrationAudio.Position = 0;
+                Stream userRegistrationAudio = new MemoryStream();
+                userRegistrationAudio = downloadFileFromStorage(userRegistrationAudioLocation, userRegistrationAudio);
+                userRegistrationAudio.Position = 0;
 
 
                 //Byte[] bytes;
@@ -78,10 +79,10 @@ namespace WebApplication1.Controllers
                 //Stream audioStream = new MemoryStream(bytes);
                 //audioStream.Position = 0;
 
-                Stream userRegistrationAudio= new FileStream(@"C:\Users\jaive\Desktop\userAudio.wav", FileMode.Open);
-                userRegistrationAudio.Position = 0;
+                //Stream userRegistrationAudio= new FileStream(@"C:\Users\jaive\Desktop\userAudio.wav", FileMode.Open);
+                //userRegistrationAudio.Position = 0;
 
-                var textSpoken = speechToText(userRegistrationAudio);
+                speechText = speechToText(userRegistrationAudio);
                 #endregion
             }
             else
@@ -94,7 +95,7 @@ namespace WebApplication1.Controllers
                 //userRegistrationAudio.Position = 0;
                 //var textSpoken = speechToText(userRegistrationAudio);
             }
-            
+            return speechText;
         }
 
         private string disintegrateVideoToAudio(string userRegistrationVideoLocation)
