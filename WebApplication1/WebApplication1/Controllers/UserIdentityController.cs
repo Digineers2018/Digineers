@@ -22,6 +22,7 @@ using System.Net;
 using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Newtonsoft.Json.Linq;
 
 namespace WebApplication1.Controllers
 {
@@ -32,6 +33,8 @@ namespace WebApplication1.Controllers
         const string USERCANNOTBEIDENTIFIED = "USER CANNOT BE IDENTIFIED";
         const string BINGSPEECHAPIKEY = "ffb6a06f528441b891be8f0538e67624";
         const string COGNITIVESPEECHAPIKEY = "05d22648c9544427aa99bc5419a6d79c";
+
+
         const string IMAGE_SUBSCRIPTION_KEY = "d51fdfb00e354267bd91d120d92b2f70";
         const string IMAGE_OCP_AICP_SUBSCRIPTION_KEY = "Ocp-Apim-Subscription-Key";
         public Bitmap input_Face_Image;
@@ -53,16 +56,16 @@ namespace WebApplication1.Controllers
 
                 //string videoFilePath = @"C:\Users\Sachin13390\Desktop\Reg.mp4";
 
-                var userRegistrationAudioLocation = disintegrateVideoToAudio(videoFilePath);
+                //var userRegistrationAudioLocation = disintegrateVideoToAudio(videoFilePath);
 
                 //Stream videoFileStream = new FileStream(@"C:\Users\Sachin13390\Desktop\Reg.mp4", FileMode.Open);
                 //videoFileStream.Position = 0;
                 //uploadFileToStorage(videoFileStream, "Reg.mp4");
                 //List<string> userRegistrationImageLocations = disintegrateVideoToImages(videoFilePath);
 
-                Stream userRegistrationAudio = new MemoryStream();
-                userRegistrationAudio = downloadFileFromStorage(userRegistrationAudioLocation, userRegistrationAudio);
-                userRegistrationAudio.Position = 0;
+                //Stream userRegistrationAudio = new MemoryStream();
+                //userRegistrationAudio = downloadFileFromStorage(userRegistrationAudioLocation, userRegistrationAudio);
+                //userRegistrationAudio.Position = 0;
 
 
                 //Byte[] bytes;
@@ -70,11 +73,13 @@ namespace WebApplication1.Controllers
                 //{
                 //    userAudioStreamRecvd.Position = 0;
                 //    userRegistrationAudio.CopyTo(userAudioStreamRecvd);
-                    
                 //    bytes = ConvertWavTo16000Hz16BitMonoWav(userAudioStreamRecvd.ToArray());
                 //}
                 //Stream audioStream = new MemoryStream(bytes);
                 //audioStream.Position = 0;
+
+                Stream userRegistrationAudio= new FileStream(@"C:\Users\jaive\Desktop\userAudio.wav", FileMode.Open);
+                userRegistrationAudio.Position = 0;
 
                 var textSpoken = speechToText(userRegistrationAudio);
                 #endregion
@@ -220,7 +225,6 @@ namespace WebApplication1.Controllers
 
         private string speechToText(Stream userAudio)
         {
-
             Byte[] bytes;
             using (MemoryStream userAudioStreamRecvd = new MemoryStream())
             {
@@ -245,30 +249,24 @@ namespace WebApplication1.Controllers
             request.ContentType = @"audio/wav; codec=audio/pcm; samplerate=16000";
             request.Headers["Ocp-Apim-Subscription-Key"] = BINGSPEECHAPIKEY;
 
-            // Send an audio file by 1024 byte chunks
-            //using (FileStream fs = new FileStream(@"C:\Users\Sachin\Desktop\Recording.wav", FileMode.Open, FileAccess.Read))
-            //{
 
+            byte[] buffer = null;
+            int bytesRead = 0;
+            using (Stream requestStream = request.GetRequestStream())
+            {
                 /*
-                * Open a request stream and write 1024 byte chunks in the stream one at a time.
+                * Read 1024 raw bytes from the input audio file.
                 */
-                byte[] buffer = null;
-                int bytesRead = 0;
-                using (Stream requestStream = request.GetRequestStream())
+                buffer = new Byte[checked((uint)Math.Min(1024, (int)userAudio.Length))];
+                while ((bytesRead = userAudio.Read(buffer, 0, buffer.Length)) != 0)
                 {
-                    /*
-                    * Read 1024 raw bytes from the input audio file.
-                    */
-                    buffer = new Byte[checked((uint)Math.Min(1024, (int)userAudio.Length))];
-                    while ((bytesRead = userAudio.Read(buffer, 0, buffer.Length)) != 0)
-                    {
-                        requestStream.Write(buffer, 0, bytesRead);
-                    }
-
-                    // Flush
-                    requestStream.Flush();
+                    requestStream.Write(buffer, 0, bytesRead);
                 }
-            
+
+                // Flush
+                requestStream.Flush();
+            }
+
             using (WebResponse response = request.GetResponse())
             {
                 Console.WriteLine(((HttpWebResponse)response).StatusCode);
@@ -278,13 +276,16 @@ namespace WebApplication1.Controllers
                     speechInText = sr.ReadToEnd();
                 }
             }
+
+            JObject json = JObject.Parse(speechInText);
+
+            string text = json["NBest"].Children().First()["Display"].ToString();
+
             if (speechInText.ToLower().Contains("my name is") == true)
             {
                 speechInText = speechInText.ToLower().Replace("my name is", "");
             }
             return speechInText;
         }
-
-
     }
 }
