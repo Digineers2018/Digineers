@@ -40,7 +40,7 @@ namespace WebApplication1.Controllers
         private readonly IFaceServiceClient faceServiceClient = new FaceServiceClient(IMAGE_SUBSCRIPTION_KEY, FACE_API_ENDPOINT);
         const string storedFilePrefix = "http://stoarageaccount.blob.core.windows.net/clips/";
 
-        //    /api/UserIdentityController/ProcessRegistrationVideo
+        //    /api/UserIdentity/ProcessRegistrationVideo
         [HttpPost]
         [ActionName("ProcessRegistrationVideo")]
         public void ProcessRegistrationVideo()
@@ -49,12 +49,32 @@ namespace WebApplication1.Controllers
             if (userRegisterVideo == null)
             {
                 #region  testbed
-                var userRegistrationAudioLocation = disintegrateVideoToAudio("https://stoarageaccount.blob.core.windows.net/clips/VID_20180403_153456090.mp4");
-                List<string> userRegistrationImageLocations = disintegrateVideoToImages("https://stoarageaccount.blob.core.windows.net/clips/VID_20180403_153456090.mp4");
-                Stream userRegistrationAudio = null;
-                userRegistrationAudio = downloadFileFromStorage("https://stoarageaccount.blob.core.windows.net/clips/VID_20180403_153456090.mp4", userRegistrationAudio);
+                string videoFilePath = @"https://stoarageaccount.blob.core.windows.net/clips/Reg.mp4";
+
+                //string videoFilePath = @"C:\Users\Sachin13390\Desktop\Reg.mp4";
+
+                var userRegistrationAudioLocation = disintegrateVideoToAudio(videoFilePath);
+                Stream videoFileStream = new FileStream(@"C:\Users\Sachin13390\Desktop\Reg.mp4", FileMode.Open);
+                videoFileStream.Position = 0;
+                uploadFileToStorage(videoFileStream, "Reg.mp4");
+                //List<string> userRegistrationImageLocations = disintegrateVideoToImages(videoFilePath);
+                Stream userRegistrationAudio = new MemoryStream();
+                userRegistrationAudio = downloadFileFromStorage(userRegistrationAudioLocation, userRegistrationAudio);
                 userRegistrationAudio.Position = 0;
-                var textSpoken = speechToText(userRegistrationAudio);
+
+
+                Byte[] bytes;
+                using (MemoryStream userAudioStreamRecvd = new MemoryStream())
+                {
+                    userAudioStreamRecvd.Position = 0;
+                    userRegistrationAudio.CopyTo(userAudioStreamRecvd);
+                    
+                    bytes = ConvertWavTo16000Hz16BitMonoWav(userAudioStreamRecvd.ToArray());
+                }
+                Stream audioStream = new MemoryStream(bytes);
+
+                audioStream.Position = 0;
+                var textSpoken = speechToText(audioStream);
                 #endregion
             }
             else
@@ -80,6 +100,7 @@ namespace WebApplication1.Controllers
                 extractHelper.ConvertMedia(userRegistrationVideoLocation, audioStream, "wav");
                 audioStream.Position = 0;
                 uploadFileToStorage(audioStream, userRegistrationAudioLocation);
+                extractHelper.Abort();
                 return string.Concat(storedFilePrefix, userRegistrationAudioLocation);
             }
             else
@@ -93,19 +114,24 @@ namespace WebApplication1.Controllers
             List<string> userRegImageLocations = new List<string>();
             if (String.IsNullOrWhiteSpace(userRegistrationVideoLocation) == false)
             {
-                var userRegistrationImageLocation = "userImage_#.jpg";
                 var extractHelper = new NReco.VideoConverter.FFMpegConverter();
-                List<float> frameLocations = new List<float>() { 0.3f, 1.0F, 1.5f};
-                foreach (float frameLocation in frameLocations)
-                {
-                    using (Stream imageStream = new MemoryStream())
-                    {
-                        extractHelper.GetVideoThumbnail(userRegistrationVideoLocation, imageStream, frameLocation);
-                        imageStream.Position = 0;
-                        uploadFileToStorage(imageStream, userRegistrationImageLocation.Replace("#", frameLocations.IndexOf(frameLocation).ToString()));
-                    }
-                    userRegImageLocations.Add(string.Concat(storedFilePrefix, userRegistrationImageLocation.Replace("#", frameLocations.IndexOf(frameLocation).ToString())));
-                }
+                Stream imageStream = new MemoryStream() { Position = 0 };
+                extractHelper.GetVideoThumbnail(userRegistrationVideoLocation, imageStream, 0);
+                imageStream.Position = 0;
+                uploadFileToStorage(imageStream, "userImage.jpg");
+                //var userRegistrationImageLocation = "userImage_#.jpg";
+                //var extractHelper = new NReco.VideoConverter.FFMpegConverter();
+                //List<float> frameLocations = new List<float>() { 0.3f, 1.0F, 1.5f};
+                //foreach (float frameLocation in frameLocations)
+                //{
+                //    using (Stream imageStream = new MemoryStream())
+                //    {
+                //        extractHelper.GetVideoThumbnail(userRegistrationVideoLocation, imageStream, frameLocation);
+                //        imageStream.Position = 0;
+                //        uploadFileToStorage(imageStream, userRegistrationImageLocation.Replace("#", frameLocations.IndexOf(frameLocation).ToString()));
+                //    }
+                //    userRegImageLocations.Add(string.Concat(storedFilePrefix, userRegistrationImageLocation.Replace("#", frameLocations.IndexOf(frameLocation).ToString())));
+                //}
             }
             return userRegImageLocations;
         }
@@ -133,6 +159,7 @@ namespace WebApplication1.Controllers
 
         private static Stream downloadFileFromStorage(string fileName, Stream downloadedStream)
         {
+            fileName = fileName.Replace(storedFilePrefix, "");
             // Create storagecredentials object by reading the values from the configuration (appsettings.json)
             StorageCredentials storageCredentials = new StorageCredentials("stoarageaccount", "586DxL4HL0ayGYspCRCRAEizJTLgm1z7t9wlBcBVxzvwXQ5aJ5SGzk9sQbjZ7HdetuY2lN9GRJbeVawSdOSg0Q==");
 
@@ -204,8 +231,8 @@ namespace WebApplication1.Controllers
             request.Headers["Ocp-Apim-Subscription-Key"] = BINGSPEECHAPIKEY;
 
             // Send an audio file by 1024 byte chunks
-            using (FileStream fs = new FileStream(@"C:\Users\Sachin\Desktop\Recording.wav", FileMode.Open, FileAccess.Read))
-            {
+            //using (FileStream fs = new FileStream(@"C:\Users\Sachin\Desktop\Recording.wav", FileMode.Open, FileAccess.Read))
+            //{
 
                 /*
                 * Open a request stream and write 1024 byte chunks in the stream one at a time.
@@ -217,8 +244,8 @@ namespace WebApplication1.Controllers
                     /*
                     * Read 1024 raw bytes from the input audio file.
                     */
-                    buffer = new Byte[checked((uint)Math.Min(1024, (int)fs.Length))];
-                    while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) != 0)
+                    buffer = new Byte[checked((uint)Math.Min(1024, (int)userAudio.Length))];
+                    while ((bytesRead = userAudio.Read(buffer, 0, buffer.Length)) != 0)
                     {
                         requestStream.Write(buffer, 0, bytesRead);
                     }
@@ -226,7 +253,7 @@ namespace WebApplication1.Controllers
                     // Flush
                     requestStream.Flush();
                 }
-            }
+            
             using (WebResponse response = request.GetResponse())
             {
                 Console.WriteLine(((HttpWebResponse)response).StatusCode);
