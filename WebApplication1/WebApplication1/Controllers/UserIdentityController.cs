@@ -54,27 +54,29 @@ namespace WebApplication1.Controllers
                 //string videoFilePath = @"C:\Users\Sachin13390\Desktop\Reg.mp4";
 
                 var userRegistrationAudioLocation = disintegrateVideoToAudio(videoFilePath);
-                Stream videoFileStream = new FileStream(@"C:\Users\Sachin13390\Desktop\Reg.mp4", FileMode.Open);
-                videoFileStream.Position = 0;
-                uploadFileToStorage(videoFileStream, "Reg.mp4");
+
+                //Stream videoFileStream = new FileStream(@"C:\Users\Sachin13390\Desktop\Reg.mp4", FileMode.Open);
+                //videoFileStream.Position = 0;
+                //uploadFileToStorage(videoFileStream, "Reg.mp4");
                 //List<string> userRegistrationImageLocations = disintegrateVideoToImages(videoFilePath);
+
                 Stream userRegistrationAudio = new MemoryStream();
                 userRegistrationAudio = downloadFileFromStorage(userRegistrationAudioLocation, userRegistrationAudio);
                 userRegistrationAudio.Position = 0;
 
 
-                Byte[] bytes;
-                using (MemoryStream userAudioStreamRecvd = new MemoryStream())
-                {
-                    userAudioStreamRecvd.Position = 0;
-                    userRegistrationAudio.CopyTo(userAudioStreamRecvd);
+                //Byte[] bytes;
+                //using (MemoryStream userAudioStreamRecvd = new MemoryStream())
+                //{
+                //    userAudioStreamRecvd.Position = 0;
+                //    userRegistrationAudio.CopyTo(userAudioStreamRecvd);
                     
-                    bytes = ConvertWavTo16000Hz16BitMonoWav(userAudioStreamRecvd.ToArray());
-                }
-                Stream audioStream = new MemoryStream(bytes);
+                //    bytes = ConvertWavTo16000Hz16BitMonoWav(userAudioStreamRecvd.ToArray());
+                //}
+                //Stream audioStream = new MemoryStream(bytes);
+                //audioStream.Position = 0;
 
-                audioStream.Position = 0;
-                var textSpoken = speechToText(audioStream);
+                var textSpoken = speechToText(userRegistrationAudio);
                 #endregion
             }
             else
@@ -218,6 +220,19 @@ namespace WebApplication1.Controllers
 
         private string speechToText(Stream userAudio)
         {
+
+            Byte[] bytes;
+            using (MemoryStream userAudioStreamRecvd = new MemoryStream())
+            {
+                userAudioStreamRecvd.Position = 0;
+                userAudio.CopyTo(userAudioStreamRecvd);
+
+                bytes = ConvertWavTo16000Hz16BitMonoWav(userAudioStreamRecvd.ToArray());
+            }
+
+            userAudio = new MemoryStream(bytes);
+            userAudio.Position = 0;
+
             string speechInText = string.Empty;
 
             string requestURI = "https://speech.platform.bing.com/speech/recognition/interactive/cognitiveservices/v1?language=en-US&format=detailed";
@@ -269,5 +284,7 @@ namespace WebApplication1.Controllers
             }
             return speechInText;
         }
+
+
     }
 }
