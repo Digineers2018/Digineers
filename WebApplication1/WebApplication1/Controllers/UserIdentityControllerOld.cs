@@ -130,7 +130,7 @@ namespace WebApplication1.Controllers
 
             try
             {
-                Stream userAudioStream = disintegrateVideo(null);
+                //Stream userAudioStream = disintegrateVideo(null);
 
                 //var client = new HttpClient();
                 //var queryString = HttpUtility.ParseQueryString(string.Empty);
@@ -313,9 +313,9 @@ namespace WebApplication1.Controllers
                 using (MemoryStream userAudioStreamRecvd = new MemoryStream())
                 {
                     userAudioStream.CopyTo(userAudioStreamRecvd);
-                    bytes = ConvertWavTo16000Hz16BitMonoWav(userAudioStreamRecvd.ToArray());
+                    //bytes = ConvertWavTo16000Hz16BitMonoWav(userAudioStreamRecvd.ToArray());
                 }
-                Stream audioStream = new MemoryStream(bytes);
+                Stream audioStream = null;//new MemoryStream(bytes);
 
                 content.Add(new StreamContent(audioStream), "Data", "testFile_" + DateTime.Now.ToString("u"));
                 response = await client.PostAsync(enrollmentVerifyProfileUri, content).ConfigureAwait(false);

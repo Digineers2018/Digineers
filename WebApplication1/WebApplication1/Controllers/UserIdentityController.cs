@@ -43,21 +43,31 @@ namespace WebApplication1.Controllers
         //    /api/UserIdentityController/ProcessRegistrationVideo
         [HttpPost]
         [ActionName("ProcessRegistrationVideo")]
-        public void ProcessRegistrationVideo(Stream userRegisterVideo)
+        public void ProcessRegistrationVideo()
         {
-            if(userRegisterVideo == null)
+            Stream userRegisterVideo = null;
+            if (userRegisterVideo == null)
             {
                 #region  testbed
-                userRegisterVideo = new FileStream("", FileMode.Open);
-                #endregion  
+                var userRegistrationAudioLocation = disintegrateVideoToAudio("https://stoarageaccount.blob.core.windows.net/clips/VID_20180403_153456090.mp4");
+                List<string> userRegistrationImageLocations = disintegrateVideoToImages("https://stoarageaccount.blob.core.windows.net/clips/VID_20180403_153456090.mp4");
+                Stream userRegistrationAudio = null;
+                userRegistrationAudio = downloadFileFromStorage("https://stoarageaccount.blob.core.windows.net/clips/VID_20180403_153456090.mp4", userRegistrationAudio);
+                userRegistrationAudio.Position = 0;
+                var textSpoken = speechToText(userRegistrationAudio);
+                #endregion
             }
             else
             {
-                uploadFileToStorage(userRegisterVideo, "userVideo.mp4");
-                var userRegistrationAudioLocation = disintegrateVideoToAudio(string.Concat(storedFilePrefix, "userVideo.mp4"));
-                List<string> userRegistrationImageLocations = disintegrateVideoToImages(string.Concat(storedFilePrefix, "userVideo.mp4"));
-                var textSpoken = speechToText(new FileStream(userRegistrationAudioLocation, FileMode.Open));
+                ////uploadFileToStorage(userRegisterVideo, "userVideo.mp4");
+                //var userRegistrationAudioLocation = disintegrateVideoToAudio(string.Concat(storedFilePrefix, "userVideo.mp4"));
+                //List<string> userRegistrationImageLocations = disintegrateVideoToImages(string.Concat(storedFilePrefix, "userVideo.mp4"));
+                //Stream userRegistrationAudio = null;
+                //userRegistrationAudio = downloadFileFromStorage("https://stoarageaccount.blob.core.windows.net/clips/VID_20180403_153456090.mp4", userRegistrationAudio);
+                //userRegistrationAudio.Position = 0;
+                //var textSpoken = speechToText(userRegistrationAudio);
             }
+            
         }
 
         private string disintegrateVideoToAudio(string userRegistrationVideoLocation)
@@ -119,8 +129,30 @@ namespace WebApplication1.Controllers
 
             // Upload the file
             blockBlob.UploadFromStream(fileStream);
+        }
 
+        private static Stream downloadFileFromStorage(string fileName, Stream downloadedStream)
+        {
+            // Create storagecredentials object by reading the values from the configuration (appsettings.json)
+            StorageCredentials storageCredentials = new StorageCredentials("stoarageaccount", "586DxL4HL0ayGYspCRCRAEizJTLgm1z7t9wlBcBVxzvwXQ5aJ5SGzk9sQbjZ7HdetuY2lN9GRJbeVawSdOSg0Q==");
 
+            // Create cloudstorage account by passing the storagecredentials
+            CloudStorageAccount storageAccount = new CloudStorageAccount(storageCredentials, true);
+
+            // Create the blob client.
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+
+            // Get reference to the blob container by passing the name by reading the value from the configuration (appsettings.json)
+            CloudBlobContainer container = blobClient.GetContainerReference("clips");
+
+            // Get the reference to the block blob from the container
+            CloudBlockBlob blockBlob = container.GetBlockBlobReference(fileName);
+
+            // Upload the file
+            
+            blockBlob.DownloadToStream(downloadedStream);
+            downloadedStream.Position = 0;
+            return downloadedStream;
         }
 
         private static byte[] ConvertWavTo16000Hz16BitMonoWav(byte[] inArray)
