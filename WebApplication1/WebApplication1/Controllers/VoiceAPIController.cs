@@ -240,43 +240,6 @@ namespace WebApplication1.Controllers
             }
         }
 
-
-        //    /api/VoiceAPI/DeleteAllEnrolment
-        [HttpGet]
-        [ActionName("DeleteAllEnrolment")]
-        public async Task<String> DeleteAllEnrolment(Stream userAudio)
-        {
-            var client = new HttpClient();
-            string allProfileID = "";
-            var queryString = HttpUtility.ParseQueryString(string.Empty);
-
-            // Request headers
-            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
-
-            var enrollmentVerifyProfileUri = "https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles?" ;
-
-            var response = await client.GetAsync(enrollmentVerifyProfileUri);
-
-            var profileIdResponseData = await response.Content.ReadAsAsync<List<Object>>();
-
-            foreach (var foundProfileID in profileIdResponseData)
-            {
-                allProfileID = (foundProfileID as Newtonsoft.Json.Linq.JObject)["identificationProfileId"].ToString();
-
-                client = new HttpClient();
-
-                // Request headers
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", COGNITIVESPEECHAPIKEY);
-
-                var uri = "https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles/" + allProfileID;
-
-                response = await client.DeleteAsync(uri);
-                var deleteOperationStatus = await response.Content.ReadAsAsync<ExpandoObject>();
-            }
-
-            return "";
-        }
-
         //    /api/VoiceAPI/UserSpeechToText
         [HttpGet]
         [ActionName("UserSpeechToText")]
