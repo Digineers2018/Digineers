@@ -345,19 +345,7 @@ namespace WebApplication1.Controllers
                     speechText = speechToText(userRegistrationAudio);
 
                     #region Image
-                    //Face[] faces = await uploadAndDetectFaces(imageStream);
-                    //var faceIds = faces.Select(face => face.FaceId).ToArray();
-
-                    //foreach (var identifyResult in await faceServiceClient.IdentifyAsync(personGroupId, faceIds))
-                    //{
-                    //    if (identifyResult.Candidates.Length != 0)
-                    //    {
-                    //        var candidateId = identifyResult.Candidates[0].PersonId;
-                    //        var person = await faceServiceClient.GetPersonInPersonGroupAsync(personGroupId, candidateId);
-                    //        return person.Name;
-                    //    }
-                    //}
-                    //return USERCANNOTBEIDENTIFIED;
+                    
                     #endregion
 
 
@@ -372,6 +360,86 @@ namespace WebApplication1.Controllers
             return speechText;
         }
 
+        //    /api/UserIdentity/ProcessRegistrationImage
+        [HttpPost]
+        [ActionName("ProcessRegistrationImage")]
+        public async Task<String> ProcessRegistrationImage()
+        {
+            Stream userRegisterImage = await this.Request.Content.ReadAsStreamAsync();
+            userRegisterImage.Position = 0;
+            string imageRegistrationStatus = string.Empty;
+            
+            if(userRegisterImage == null)
+            {
+
+            }
+            else
+            {
+                try
+                {
+                    string personImageName = string.Format("UserImage_{0}", new Random().Next(0, 999).ToString("D3"));
+                    CreatePersonResult person = await faceServiceClient.CreatePersonInPersonGroupAsync(personGroupId, personImageName);
+                    await faceServiceClient.AddPersonFaceInPersonGroupAsync(personGroupId, person.PersonId, userRegisterImage);
+                    await faceServiceClient.TrainPersonGroupAsync(personGroupId);
+                    TrainingStatus trainingStatus = null;
+                    while (true)
+                    {
+                        trainingStatus = await faceServiceClient.GetPersonGroupTrainingStatusAsync(personGroupId);
+
+                        if (trainingStatus.Status != Microsoft.ProjectOxford.Face.Contract.Status.Running)
+                        {
+                            break;
+                        }
+                        await Task.Delay(1000);
+                    }
+                    imageRegistrationStatus = trainingStatus.Status.ToString();
+                }
+                catch(Exception ex)
+                {
+                    imageRegistrationStatus = ex.Message;
+                }
+            }
+
+            return imageRegistrationStatus;
+        }
+
+        //    /api/UserIdentity/ProcessIdentificationImage
+        [HttpPost]
+        [ActionName("ProcessIdentificationImage")]
+        public async Task<String> ProcessIdentificationImage()
+        {
+            Stream userIdentificationImage = await this.Request.Content.ReadAsStreamAsync();
+            userIdentificationImage.Position = 0;
+            string identifiedUser = string.Empty;
+            if (userIdentificationImage == null)
+            {
+
+            }
+            else
+            {
+                try
+                {
+                    Face[] faces = await uploadAndDetectFaces(userIdentificationImage);
+                    var faceIds = faces.Select(face => face.FaceId).ToArray();
+
+                    foreach (var identifyResult in await faceServiceClient.IdentifyAsync(personGroupId, faceIds))
+                    {
+                        if (identifyResult.Candidates.Length != 0)
+                        {
+                            var candidateId = identifyResult.Candidates[0].PersonId;
+                            var person = await faceServiceClient.GetPersonInPersonGroupAsync(personGroupId, candidateId);
+                            identifiedUser = person.Name;
+                        }
+                    }
+                    identifiedUser = USERCANNOTBEIDENTIFIED;
+                }
+                catch(Exception ex)
+                {
+                    identifiedUser = ex.Message;
+                }
+            }
+            return identifiedUser;
+        }
 
         //    /api/UserIdentity/ProcessRegistrationVideoTest
         [HttpPost]
