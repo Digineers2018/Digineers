@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">My Application</string>
+
+    <string name="demo_string1">Please speak your name.</string>
+    <string name="demo_string2">e.g. My Name is James Smith.</string>
+
+
+</resources>
